@@ -1,1 +1,842 @@
 
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Security Certification Roadmap</title>
+
+    <!-- 1. Load Fonts (Inter for UI & Fira Code for technical text) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+
+    <!-- 2. Load Alpine.js (for interactivity: search, dark mode, modals) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- 3. Load Tailwind CSS via CDN with Custom Configuration -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif'],
+                    mono: ['Fira Code', 'monospace'],
+                },
+                extend: {
+                    colors: {
+                        // Original color scheme mapped for easy use
+                        domain: {
+                            net: '#548235',
+                            iam: '#008080',
+                            eng: '#c06216',
+                            asset: '#e4ac03',
+                            mgmt: '#2a2a2a',
+                            test: '#683e9b',
+                            soft: '#2665a0',
+                            ops: '#c0514d',
+                        },
+                        // Light/dark backgrounds
+                        bgdata: {
+                            light: '#f9fafb', // Lighter than gray-50
+                            dark: '#0f172a',  // Darker than slate-900
+                        }
+                    },
+                    boxShadow: {
+                        'glass': '0 4px 30px rgba(0, 0, 0, 0.1)',
+                    },
+                    gridTemplateColumns: {
+                        // Custom grid for our 8 domains
+                        'roadmap': 'repeat(8, minmax(0, 1fr))',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style type="text/tailwindcss">
+        /* Base styles and custom utilities */
+        @layer base {
+            [x-cloak] {
+                display: none !important;
+            }
+        }
+
+        @layer components {
+            .glass-panel {
+                @apply bg-white/70 dark:bg-bgdata-dark/70 backdrop-blur-lg;
+            }
+            .cert-chip {
+                @apply relative w-full text-center text-[10px] sm:text-xs font-semibold text-white py-1.5 px-2 rounded-lg shadow-md border-b-2 border-black/20 
+                       transform transition-all duration-200 cursor-pointer
+                       hover:scale-105 hover:shadow-xl hover:z-10 truncate block;
+                font-family: 'Fira Code', monospace;
+            }
+            /* Enhanced Tooltip for showing full name on hover */
+            .tooltip {
+                @apply invisible absolute;
+            }
+            .has-tooltip:hover .tooltip {
+                @apply visible z-50;
+            }
+        }
+        
+        @layer utilities {
+            .no-scrollbar::-webkit-scrollbar {
+                display: none;
+            }
+            .no-scrollbar {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+        }
+    </style>
+</head>
+
+<!-- Alpine.js Data Scope and Dark Mode Initialization -->
+<body 
+    x-data="certMap()" 
+    x-init="init()" 
+    :class="{ 'dark': isDark }" 
+    class="bg-bgdata-light dark:bg-bgdata-dark text-gray-800 dark:text-gray-200 min-h-screen transition-colors duration-300 font-sans"
+>
+
+    <!-- ===========================
+       Fixed Header with Controls
+    ============================ -->
+    <header class="sticky top-0 z-50 glass-panel border-b border-gray-200/50 dark:border-white/10 shadow-glass">
+        <div class="max-w-[98%] mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                
+                <!-- Title & Stats -->
+                <div class="flex items-center gap-4 flex-shrink-0">
+                    <h1 class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-blue-600 to-sky-400 text-transparent bg-clip-text">
+                        Certification Roadmap
+                    </h1>
+                    <span class="hidden md:inline-block text-xs font-mono text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 rounded-full px-3 py-1" x-text="certs.length + ' Certs'"></span>
+                </div>
+
+                <!-- Controls: Search & Dark Mode -->
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <div class="relative w-full sm:w-64">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/></svg>
+                        </div>
+                        <input type="search" x-model.debounce.300ms="searchQuery" placeholder="Filter by name, acronym..." class="block w-full p-2.5 pl-10 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 focus:ring-blue-500 focus:border-blue-500 dark:placeholder-gray-400 dark:text-white transition-colors">
+                        <button x-show="searchQuery.length > 0" @click="searchQuery = ''" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-white">
+                            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+
+                    <button @click="toggleTheme()" class="p-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200" aria-label="Toggle Dark Mode">
+                        <svg x-show="isDark" class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M3.75 12H6m.386-6.364L4.773 4.773" /></svg>
+                        <svg x-show="!isDark" class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" /></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Full Domain Legend (Scrollable on mobile) -->
+            <div class="mt-4 pt-3 border-t border-gray-200/80 dark:border-white/10">
+                <div class="flex gap-2 sm:gap-4 overflow-x-auto no-scrollbar pb-1.5">
+                    <template x-for="domain in domains" :key="domain.key">
+                        <div class="flex-shrink-0 flex items-center gap-2 px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700">
+                            <span class="w-3 h-3 rounded-full" :style="`background-color: ${domain.color}`"></span>
+                            <span class="text-xs font-semibold tracking-wide text-gray-700 dark:text-gray-300 whitespace-nowrap" x-text="domain.name"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ===========================
+       Main Content Grid
+    ============================ -->
+    <main class="max-w-[98%] mx-auto pt-8 px-2 sm:px-4">
+
+        <div x-show="searchQuery !== '' && filteredCerts.length === 0" class="text-center py-20" x-cloak>
+             <svg class="w-12 h-12 mx-auto text-gray-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
+             <h3 class="text-xl font-semibold text-gray-700 dark:text-gray-300">No Results Found</h3>
+             <p class="text-gray-500 mt-2">No certifications matched your search for "<span class="font-semibold text-gray-600 dark:text-gray-300" x-text="searchQuery"></span>".</p>
+             <button @click="searchQuery = ''" class="mt-4 text-blue-500 hover:underline font-semibold">Clear Search</button>
+        </div>
+
+        <div x-show="filteredCerts.length > 0">
+            <template x-for="(level, index) in levels" :key="level.name">
+                <section class="mb-12" x-show="hasCertsInLevel(level.name)">
+                    
+                    <!-- Skill Level Header (Expert, etc.) -->
+                    <div class="flex items-center mb-6">
+                        <div class="h-px bg-gray-300 dark:bg-gray-700 flex-grow"></div>
+                        <h2 class="px-4 text-2xl sm:text-3xl font-black uppercase tracking-widest" :style="`color: ${level.color}`" x-text="level.name"></h2>
+                        <div class="h-px bg-gray-300 dark:bg-gray-700 flex-grow"></div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+                        <template x-for="domain in domains" :key="domain.key + level.name">
+                            <div class="flex flex-col" x-show="hasCertsInDomain(level.name, domain.key)">
+                                <!-- Domain Title + Sub-Domain Titles (Combined) -->
+                                <div class="glass-panel text-center text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 p-2 rounded-t-lg border-b border-gray-200 dark:border-gray-700 shadow-sm">
+                                    <div :style="`color: ${domain.color}`" x-text="domain.shortName || domain.name"></div>
+                                    <div class="text-[9px] font-medium text-gray-400 dark:text-gray-500 mt-0.5 normal-case" x-text="domain.subDomains" x-show="domain.subDomains"></div>
+                                </div>
+                                
+                                <div class="bg-white/50 dark:bg-gray-800/30 rounded-b-lg p-2.5 min-h-[120px] flex flex-col gap-2 border border-t-0 border-gray-100 dark:border-gray-800 backdrop-blur-sm h-full">
+                                    <template x-for="cert in getCerts(level.name, domain.key)" :key="cert.id">
+                                        <!-- Certification Chip with Hover Tooltip -->
+                                        <div class="has-tooltip relative w-full">
+                                            <!-- Simple Tooltip -->
+                                            <div class="tooltip -top-8 left-1/2 -translate-x-1/2 p-2 rounded-lg bg-gray-900 text-white text-xs whitespace-nowrap shadow-lg">
+                                                <span x-text="cert.fullName"></span>
+                                            </div>
+                                            <!-- The Button -->
+                                            <button @click="openCertModal(cert)" class="cert-chip" :style="`background-color: ${domain.color}; border-color: ${cert.borderColor}`">
+                                                <span x-text="cert.acronym"></span>
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </section>
+            </template>
+        </div>
+
+        <footer class="mt-16 text-center border-t border-gray-200 dark:border-gray-700 pt-8 pb-4">
+            <p class="text-sm text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
+                This is a guide, not a definitive path. Prices & requirements are estimates. Always verify information with the certification body. Based on the excellent original work by CyberSecurity teams.
+            </p>
+            <div class="mt-4 text-xs font-mono text-gray-400">
+                <p>
+                  &copy; 2026 by <a href="https://github.com/hackthacker" target="_blank">Hackthacker</a> 
+                  | 
+                  Visit my Blog: <a href="https://hackthacker.blogspot.com" target="_blank">hackthacker.blogspot.com</a>
+                </p>
+        </footer>
+
+    </main>
+
+    <!-- ===========================
+       Details Modal Component
+    ============================ -->
+    <div x-show="modalOpen" x-cloak class="relative z-[100]" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div x-show="modalOpen" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-gray-900/60 dark:bg-black/80 backdrop-blur-sm transition-opacity"></div>
+        <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
+            <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+                <div @click.away="closeModal()" x-show="modalOpen" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="relative transform overflow-hidden rounded-2xl bg-white dark:bg-slate-800 text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg border border-gray-100 dark:border-slate-700">
+                    <div class="h-2 w-full" :style="`background-color: ${activeCert ? getDomain(activeCert.domainKey).color : '#ccc'}`"></div>
+                    <div class="px-6 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div class="sm:flex sm:items-start">
+                             <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full sm:mx-0 sm:h-10 sm:w-10" :style="`background-color: ${activeCert ? getDomain(activeCert.domainKey).color + '20' : '#ccc'}; color: ${activeCert ? getDomain(activeCert.domainKey).color : '#ccc'}`">
+                                <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" /></svg>
+                            </div>
+                            <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
+                                <div class="flex flex-wrap justify-center sm:justify-start items-baseline gap-x-3 gap-y-1 mb-2">
+                                    <h3 class="text-2xl font-bold font-mono text-gray-900 dark:text-white" x-text="activeCert?.acronym"></h3>
+                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold" :style="`background-color: ${getLevel(activeCert?.level).color + '20'}; color: ${getLevel(activeCert?.level).color}; border: 1px solid ${getLevel(activeCert?.level).color + '40'}`" x-text="activeCert?.level"></span>
+                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold" :style="`background-color: ${activeCert ? getDomain(activeCert.domainKey).color + '20' : '#ccc'}; color: ${activeCert ? getDomain(activeCert.domainKey).color : '#ccc'}; border: 1px solid ${activeCert ? getDomain(activeCert.domainKey).color + '40' : '#ccc'}`" x-text="activeCert ? getDomain(activeCert.domainKey).name : ''"></span>
+                                </div>
+                                <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 leading-snug mb-4" x-text="activeCert?.fullName"></p>
+                                <div class="bg-gray-50 dark:bg-slate-900/50 rounded-lg p-3 border border-gray-100 dark:border-slate-700 text-left">
+                                    <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Details & Est. Cost</h4>
+                                    <div class="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap font-mono leading-relaxed" x-html="activeCert?.details?.replace(/\n/g, '<br>')"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-slate-800/50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-3 rounded-b-2xl">
+                        <a :href="activeCert?.href" target="_blank" rel="noopener noreferrer" class="inline-flex w-full justify-center items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 sm:w-auto transition-colors disabled:opacity-50" :class="{ 'pointer-events-none opacity-50': activeCert?.href === '#' }">
+                            Visit Site <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>
+                        </a>
+                        <button type="button" @click="closeModal()" class="mt-3 inline-flex w-full justify-center rounded-lg bg-white dark:bg-slate-700 px-4 py-2 text-sm font-semibold text-gray-900 dark:text-gray-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 sm:mt-0 sm:w-auto transition-colors">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function certMap() {
+            return {
+                isDark: false,
+                searchQuery: '',
+                modalOpen: false,
+                activeCert: null,
+
+                // --- CONFIGURATIONS ---
+                levels: [
+                    { name: 'Expert', color: '#c0514d' }, // Red
+                    { name: 'Intermediate', color: '#c06216' }, // Orange
+                    { name: 'Beginner', color: '#548235' } // Green
+                ],
+                
+                domains: [
+                    { key: 'net', name: 'Communication & Network Security', shortName: 'Network', color: '#548235', subDomains: '' },
+                    { key: 'iam', name: 'Identity & Access Management', shortName: 'IAM', color: '#008080', subDomains: '' },
+                    { key: 'eng', name: 'Security Architecture & Engineering', shortName: 'Arch & Eng', color: '#c06216', subDomains: 'Cloud/SysOps, *nix, ICS/IoT' },
+                    { key: 'asset', name: 'Asset Security', shortName: 'Asset Sec', color: '#e4ac03', subDomains: '' },
+                    { key: 'mgmt', name: 'Security & Risk Management', shortName: 'Risk & Mgmt', color: '#2a2a2a', subDomains: 'GRC' },
+                    { key: 'test', name: 'Security Assessment & Testing', shortName: 'Assessment', color: '#683e9b', subDomains: '' },
+                    { key: 'soft', name: 'Software Development Security', shortName: 'Software Sec', color: '#2665a0', subDomains: '' },
+                    { key: 'ops', name: 'Security Operations', shortName: 'Operations', color: '#c0514d', subDomains: 'Forensics, IR, Pentest, Exploits' },
+                ],
+                
+                certs: [], // This will be populated from the external file on init
+
+                // --- INITIALIZATION ---
+                init() {
+                    // Fetch and load data
+                    this.certs = certData;
+
+                    // Set initial theme
+                    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                        this.isDark = true;
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        this.isDark = false;
+                        document.documentElement.classList.remove('dark');
+                    }
+                },
+
+                // --- UI & STATE MANAGEMENT ---
+                toggleTheme() {
+                    this.isDark = !this.isDark;
+                    if (this.isDark) {
+                        localStorage.setItem('theme', 'dark');
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        localStorage.setItem('theme', 'light');
+                        document.documentElement.classList.remove('dark');
+                    }
+                },
+                openCertModal(cert) {
+                    this.activeCert = cert;
+                    this.modalOpen = true;
+                    document.body.style.overflow = 'hidden'; 
+                },
+                closeModal() {
+                    this.modalOpen = false;
+                    document.body.style.overflow = 'auto';
+                },
+                
+                // --- COMPUTED & GETTER METHODS ---
+                get filteredCerts() {
+                    if (!this.searchQuery.trim()) return this.certs;
+                    const q = this.searchQuery.toLowerCase();
+                    return this.certs.filter(cert => 
+                        cert.acronym.toLowerCase().includes(q) || 
+                        cert.fullName.toLowerCase().includes(q)
+                    );
+                },
+                getCerts(level, domainKey) {
+                    return this.filteredCerts.filter(c => c.level === level && c.domainKey === domainKey);
+                },
+                getDomain(key) {
+                    return this.domains.find(d => d.key === key) || {};
+                },
+                getLevel(name) {
+                    return this.levels.find(l => l.name === name) || {};
+                },
+                hasCertsInLevel(level) {
+                    return this.filteredCerts.some(c => c.level === level);
+                },
+                hasCertsInDomain(level, domainKey) {
+                    return this.filteredCerts.some(c => c.level === level && c.domainKey === domainKey);
+                }
+            };
+        }
+
+        // --- ALL CERTIFICATION DATA ---
+        // (This would ideally be in its own certs.js file, but is included here for a single-file solution)
+        const certData = [
+            
+  { "id": "cert_1", "acronym": "OSEE", "fullName": "Offensive Security Exploitation Expert", "details": "$5,000 lab\nPlus travel", "href": "https://www.offensive-security.com/awe-osee/", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_2", "acronym": "CCIE Sec", "fullName": "Cisco Certified Implementation Expert - Security", "details": "$2,050 Hands-on Lab\n$12,000 est Travel cost", "href": "https://www.cisco.com/c/en/us/training-events/training-certifications/certifications/expert/ccie-security.html", "level": "Expert", "domainKey": "net" },
+  { "id": "cert_3", "acronym": "CREST CRTSA", "fullName": "CREST Registered Technical Security Architect", "details": "$2,300 two exams\nIn person in the UK", "href": "https://www.crest-approved.org/examination/technical-security-architecture/index.html", "level": "Expert", "domainKey": "eng" },
+  { "id": "cert_4", "acronym": "ITIL Master", "fullName": "ITIL Master", "details": "$4,000 Interview", "href": "https://www.axelos.com/certifications/itil-certifications/itil-master", "level": "Expert", "domainKey": "mgmt" },
+  { "id": "cert_5", "acronym": "OSCE3", "fullName": "Offensive Security Certified Expert 3", "details": "$4,649 3 labs", "href": "https://help.offensive-security.com/hc/en-us/articles/4403282452628-What-is-OSCE3-", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_6", "acronym": "CCIE Ent", "fullName": "Cisco Certified Internetwork Expert - Enterprise Infrastructure", "details": "~$2,050 hands-on lab\n~$12,000 in travel costs", "href": "https://www.cisco.com/c/en/us/training-events/training-certifications/certifications/expert/ccie-security-v2.html", "level": "Expert", "domainKey": "net" },
+  { "id": "cert_7", "acronym": "VCDX DCV", "fullName": "VMware Certified Design Expert in Datacenter Virtualization", "details": "$3,995 exams\nApplication also req.", "href": "https://www.vmware.com/education-services/certification/vcdx-dcv.html", "level": "Expert", "domainKey": "eng" },
+  { "id": "cert_8", "acronym": "RHCA", "fullName": "Red Hat Certified Architect", "details": "~$3,745 exam\nplus travel", "href": "https://www.redhat.com/en/services/certification/rhca", "level": "Expert", "domainKey": "eng" },
+  { "id": "cert_9", "acronym": "SABSA SCM", "fullName": "SABSA Chartered Security Architect - Master Certificate", "details": "$3,750 exam & thesis\nBranded course required", "href": "https://sabsa.org/certification/", "level": "Expert", "domainKey": "eng" },
+  { "id": "cert_10", "acronym": "GSE", "fullName": "GIAC Security Expert", "details": "~$7475 for 10 exams", "href": "https://www.giac.org/get-certified/giac-portfolio-certifications/#GSE", "level": "Expert", "domainKey": "mgmt" },
+  { "id": "cert_11", "acronym": "GREM", "fullName": "GIAC Reverse Engineering Malware", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certifications/reverse-engineering-malware-grem/", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_12", "acronym": "OSWE", "fullName": "Offensive Security Web Expert", "details": "~$1649 lab", "href": "https://www.offensive-security.com/awae-oswe/", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_13", "acronym": "OSEP", "fullName": "Offensive Security Experienced Penetration Tester", "details": "$1,499 lab", "href": "https://www.offensive-security.com/pen300-osep/", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_14", "acronym": "OSED", "fullName": "Offensive Security Exploit Developer", "details": "$1,499 lab", "href": "https://www.offensive-security.com/exp301-osed/", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_15", "acronym": "PgMP", "fullName": "PMI Program Management Professional", "details": "$1,000 exam", "href": "https://www.pmi.org/certifications/types/program-management-pgmp", "level": "Expert", "domainKey": "mgmt" },
+  { "id": "cert_16", "acronym": "CISSP Concentrations", "fullName": "(ISC)2 Certified Information Systems Security Professional Concentrations", "details": "$599 exam", "href": "https://www.isc2.org/certifications#Specialized", "level": "Expert", "domainKey": "mgmt" },
+  { "id": "cert_17", "acronym": "NCSC CCPLP", "fullName": "NCSC Certified Cybersecurity Professional - Lead Practitioner", "details": "$1388 interview", "href": "https://www.ncsc.gov.uk/information/about-certified-professional-scheme", "level": "Expert", "domainKey": "mgmt" },
+  { "id": "cert_18", "acronym": "CFCE", "fullName": "IACIS Certified Forensic Computer Examiner", "details": "$750 4 peer reviewed exams", "href": "https://www.iacis.com/certification/", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_19", "acronym": "GXPN", "fullName": "GIAC Exploit Researcher and Advanced Penetration Tester", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/gxpn", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_20", "acronym": "VCIX DCV", "fullName": "VMware Certified Implementation Expert in Datacenter Virtualization", "details": "$900 two exams", "href": "https://www.vmware.com/education-services/certification/vcap-dcv-design.html", "level": "Expert", "domainKey": "eng" },
+  { "id": "cert_21", "acronym": "ASIS CPP", "fullName": "ASIS Certified Protection Professional", "details": "$485 exam", "href": "https://www.asisonline.org/certification/certified-protection-professional-cpp/", "level": "Expert", "domainKey": "asset" },
+  { "id": "cert_22", "acronym": "Zach EAPro", "fullName": "Zachman Enterprise Architect Professional (Level 3)", "details": "$2,999 exam & case study\nLevel 1 & 2 cert not req'd", "href": "https://www.zachman.com/certification/what-we-certify/enterprise-architect", "level": "Expert", "domainKey": "mgmt" },
+  { "id": "cert_23", "acronym": "PMP", "fullName": "PMI Project Management Professional", "details": "$555 exam", "href": "https://www.pmi.org/certifications/project-management-pmp", "level": "Expert", "domainKey": "mgmt" },
+  { "id": "cert_24", "acronym": "CISM", "fullName": "ISACA Certified Information Security Manager", "details": "$760 exam", "href": "https://www.isaca.org/credentialing/cism", "level": "Expert", "domainKey": "mgmt" },
+  { "id": "cert_25", "acronym": "S-ISME", "fullName": "SECO Information Security Management Expert", "details": "$850 exam", "href": "https://www.seco-institute.org/certifications/information-security-certification-track/", "level": "Expert", "domainKey": "mgmt" },
+  { "id": "cert_26", "acronym": "NCSC CCPSP", "fullName": "NCSC Certified Cybersecurity Professional - Senior Practitioner", "details": "$907 interview", "href": "https://www.ncsc.gov.uk/information/about-certified-professional-scheme", "level": "Expert", "domainKey": "mgmt" },
+  { "id": "cert_27", "acronym": "CSFA", "fullName": "CSIAC CyberSecurity Forensic Analyst", "details": "$750 exam & lab", "href": "https://www.csiac.org/certification/cybersecurity-forensic-analyst-csfa-certification/", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_28", "acronym": "GIME", "fullName": "GIAC iOS and MacOS Examiner", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certifications/ios-macos-examiner-gime/", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_29", "acronym": "GAWN", "fullName": "GIAC Assessing Wireless Networks", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/gawn", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_30", "acronym": "CISSP", "fullName": "(ISC)2 Certified Information Systems Security Professional", "details": "$749 exam", "href": "https://www.isc2.org/Certifications/CISSP", "level": "Expert", "domainKey": "mgmt" },
+  { "id": "cert_31", "acronym": "CCD", "fullName": "Certified CyberDefender", "details": "$800 course\n2 exam attempt included", "href": "https://cyberdefenders.org/blue-team-training/courses/certified-cyberdefender-certification/", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_32", "acronym": "CAWFE", "fullName": "IACIS Certified Advanced Windows Forensic Examiner", "details": "$750 written exam & lab", "href": "https://www.iacis.com/certification/cawfe/", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_33", "acronym": "GCFA", "fullName": "GIAC Certified Forensic Analyst", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/gcfa", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_34", "acronym": "GCTI", "fullName": "GIAC Cyber Threat Intelligence", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/gcti", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_35", "acronym": "CREST CSAM", "fullName": "CREST Certified Simulated Attack Manager", "details": "$2,499 2 exams", "href": "https://www.crest-approved.org/certification-careers/crest-certifications/crest-certified-simulated-attack-manager", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_36", "acronym": "JNCIE Sec", "fullName": "Juniper Networks Certified Internet Expert, Security", "details": "$1,400 Hands-on Lab", "href": "https://www.juniper.net/us/en/training/certification/certification-tracks/junos-security-track/?tab=jnciesec", "level": "Expert", "domainKey": "net" },
+  { "id": "cert_37", "acronym": "CCDE", "fullName": "Cisco Certified Design Expert", "details": "~$1,600 written exam\nwith hands-on lab", "href": "https://www.cisco.com/c/en/us/training-events/training-certifications/certifications/expert/ccde.html", "level": "Expert", "domainKey": "net" },
+  { "id": "cert_38", "acronym": "AWS SAP", "fullName": "Amazon Web Services Certified Solutions Architect - Professional", "details": "$300 exam", "href": "https://aws.amazon.com/certification/certified-solutions-architect-professional/", "level": "Expert", "domainKey": "eng" },
+  { "id": "cert_39", "acronym": "RHCE", "fullName": "Red Hat Certified Engineer", "details": "$400 exam", "href": "https://www.redhat.com/en/services/certification/rhce", "level": "Expert", "domainKey": "eng" },
+  { "id": "cert_40", "acronym": "GDAT", "fullName": "GIAC Defending Advanced Threats", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/defending-advanced-threats-gdat", "level": "Expert", "domainKey": "eng" },
+  { "id": "cert_41", "acronym": "SC-100", "fullName": "Microsoft Cybersecurity Architect", "details": "$165 exam", "href": "https://docs.microsoft.com/en-us/certifications/exams/sc-100", "level": "Expert", "domainKey": "eng" },
+  { "id": "cert_42", "acronym": "TOGAF", "fullName": "OpenGroup TOGAF Certified", "details": "$360 exam", "href": "https://www.opengroup.org/certifications/togaf", "level": "Expert", "domainKey": "mgmt" },
+  { "id": "cert_43", "acronym": "CCISO", "fullName": "EC Council Certified Information Security Officer", "details": "$3,150 course exam\nBranded course required", "href": "https://ciso.eccouncil.org/cciso-certification/", "level": "Expert", "domainKey": "mgmt" },
+  { "id": "cert_44", "acronym": "EEXIN ISM", "fullName": "EXIN Information Security Management Expert", "details": "EST $799 oral exam", "href": "https://www.exin.com/certifications/information-security-management-expert-based-isoiec-27001-exam", "level": "Expert", "domainKey": "mgmt" },
+  { "id": "cert_45", "acronym": "GSTRT", "fullName": "GIAC Strategic Planning, Policy and Leadership", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/gstrt", "level": "Expert", "domainKey": "mgmt" },
+  { "id": "cert_46", "acronym": "NCSC CCPP", "fullName": "NCSC Certified Cybersecurity Professional - Practitioner", "details": "$225 interview", "href": "https://www.ncsc.gov.uk/information/about-certified-professional-scheme", "level": "Expert", "domainKey": "mgmt" },
+  { "id": "cert_47", "acronym": "GSNA", "fullName": "GIAC Systems and Network Auditor", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/gsna", "level": "Expert", "domainKey": "test" },
+  { "id": "cert_48", "acronym": "CFSR", "fullName": "OpenText Certified Forensic Security Responder", "details": "$250 written exam & lab", "href": "https://www.opentext.com/products-and-solutions/services/training-and-learning-services/encase-training/forensic-security-responder-certification", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_49", "acronym": "GNFA", "fullName": "GIAC Network Forensic Analyst", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/network-forensic-analyst-gnfa", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_50", "acronym": "eWPTX", "fullName": "eLearnSecurity Web Application Penetration Tester eXtreme", "details": "$400 exam\n$2000 training", "href": "https://elearnsecurity.com/product/ewptxv2-certification/", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_51", "acronym": "CREST CCSAS", "fullName": "CREST Certified Simulated Attack Specialist", "details": "$2,520 2 exams & lab", "href": "https://www.crest-approved.org/certification-careers/crest-certifications/crest-certified-simulated-attack-specialist", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_52", "acronym": "FCX", "fullName": "Fortinet Certified Expert", "details": "$400 written exam\n$1600 in-person lab", "href": "https://training.fortinet.com/local/staticpage/view.php?page=fcx_cybersecurity", "level": "Expert", "domainKey": "net" },
+  { "id": "cert_53", "acronym": "AZ-305", "fullName": "Microsoft Azure Solutions Architect Expert", "details": "$330 exam", "href": "https://docs.microsoft.com/en-us/learn/certifications/azure-solutions-architect?wt.mc_id=learningredirect_certs-web-wwl", "level": "Expert", "domainKey": "eng" },
+  { "id": "cert_54", "acronym": "VCIX NV", "fullName": "VMware Certified Implementation Expert in Network Virtualization", "details": "$900 two exams", "href": "https://www.vmware.com/education-services/certification/vcap-nv-deploy.html", "level": "Expert", "domainKey": "eng" },
+  { "id": "cert_55", "acronym": "LPIC-3", "fullName": "Linux Professional Institute Certified: 303 Security", "details": "$200 exam", "href": "https://www.lpi.org/our-certifications/lpic-3-303-overview", "level": "Expert", "domainKey": "eng" },
+  { "id": "cert_56", "acronym": "SABSA SCP", "fullName": "SABSA Chartered Security Architect - Practitioner Certificate", "details": "$3,750 written exam\nBranded course required", "href": "https://sabsa.org/certification/", "level": "Expert", "domainKey": "eng" },
+  { "id": "cert_57", "acronym": "PSM III", "fullName": "Scrum.org Professional Scrum Master III", "details": "$500 exam\nBranded course required", "href": "https://www.scrum.org/assessments/professional-scrum-master-iii-certification", "level": "Expert", "domainKey": "mgmt" },
+  { "id": "cert_58", "acronym": "GSP", "fullName": "GIAC Security Professional", "details": "~$3735 for 5 exams", "href": "https://www.giac.org/get-certified/giac-portfolio-certifications/#gsp", "level": "Expert", "domainKey": "mgmt" },
+  { "id": "cert_59", "acronym": "GISP", "fullName": "GIAC Information Security Professional", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/gisp", "level": "Expert", "domainKey": "mgmt" },
+  { "id": "cert_60", "acronym": "MTIA", "fullName": "Mosse Institute Certified Threat Intelligence Analyst Certification", "details": "$450 certification programme\n100% practical. No expiry.", "href": "https://www.mosse-institute.com/certifications/mtia-certified-threat-intelligence-analyst.html", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_61", "acronym": "GCFR", "fullName": "GIAC Cloud Forensics Responder", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certifications/cloud-forensics-responder-gcfr/", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_62", "acronym": "BTL2", "fullName": "Security Blue Team Level 2", "details": "$2,190 course\n1 exam attempt included", "href": "https://securityblue.team/btl2/", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_63", "acronym": "MRT", "fullName": "Mosse Institute Certified Red Teamer Certification", "details": "$450 certification programme\n100% practical. No expiry.", "href": "https://www.mosse-institute.com/certifications/mrt-certified-red-teamer.html", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_64", "acronym": "CREST CCTINF", "fullName": "CREST Certified Infrastructure Tester", "details": "$2,520 exam & lab", "href": "https://www.crest-approved.org/certification-careers/crest-certifications/crest-certified-infrastructure-tester", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_65", "acronym": "HTB CWEE", "fullName": "Hack the Box Certified Web Exploitation Expert", "details": "$1260 Subscription available", "href": "https://academy.hackthebox.com/preview/certifications/htb-certified-web-exploitation-expert", "level": "Expert", "domainKey": "ops" },
+  { "id": "cert_66", "acronym": "Google PCSA", "fullName": "Google Professional Cloud Architect", "details": "$200 exam", "href": "https://cloud.google.com/certification/cloud-architect", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_67", "acronym": "SCE", "fullName": "SUSE Certified Engineer", "details": "$195 practical exam", "href": "https://www.suse.com/training/exam/sce-sles-15/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_68", "acronym": "ISA CE", "fullName": "ISA Cybersecurity Expert", "details": "$2,700 course + exam\nCourse required", "href": "https://www.isa.org/training-and-certifications/isa-certification/isa99iec-62443/isa99iec-62443-cybersecurity-certificate-programs/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_69", "acronym": "GDSA", "fullName": "GIAC Defensible Security Architecture", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/defensible-security-architecture-gdsa", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_70", "acronym": "ITIL SL", "fullName": "ITIL Strategic Leader", "details": "$4,800 two course exams\n2 branded courses required", "href": "https://www.axelos.com/certifications/itil-certifications/itil-strategic-leader-itil-4", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_71", "acronym": "Zach EAP", "fullName": "Zachman Enterprise Architect Practitioner (Level 2)", "details": "$2,999 exam & case study\nLevel 1 cert not req'd", "href": "https://www.zachman.com/certification/what-we-certify/enterprise-architect", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_72", "acronym": "GSLC", "fullName": "GIAC Security Leadership Certification", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/gslc", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_73", "acronym": "S-CISO", "fullName": "SECO Certified Information Security Officer", "details": "Resume review", "href": "https://www.seco-institute.org/certifications/information-security-certification-track/", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_74", "acronym": "GCFE", "fullName": "GIAC Cerified Forensics Examiner", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/gcfe", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_75", "acronym": "GEIR", "fullName": "GIAC Enterprise Incident Response", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certifications/enterprise-incident-responder-geir/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_76", "acronym": "PACES", "fullName": "Pentester Academy Certified Enterprise Security Specialist", "details": "$339-749 Lab access\nExam included", "href": "https://www.pentesteracademy.com/gcb", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_77", "acronym": "S-CEHL", "fullName": "SECO Certified Ethical Hacker Leader", "details": "Application", "href": "https://www.seco-institute.org/certifications/ethical-hacking-track/leader/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_78", "acronym": "CREST CRT", "fullName": "CREST Registered Penetration Tester", "details": "$612 exam", "href": "https://www.crest-approved.org/certification-careers/crest-certifications/crest-registered-penetration-tester", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_79", "acronym": "CRTO II", "fullName": "Zero Point Security Red Team Operator II", "details": "$121 lab", "href": "https://training.zeropointsecurity.co.uk/courses/red-team-ops-ii", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_80", "acronym": "MCD", "fullName": "Mosse Institute Certified Code Deobfuscation Specialist Certification", "details": "$450 certification programme\n100% practical. No expiry.", "href": "https://www.mosse-institute.com/certifications/mcd-certified-code-deobfuscation-specialist.html", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_81", "acronym": "CCNP Sec", "fullName": "Cisco Certified Network Professional - Security", "details": "~$1,200 exam", "href": "https://www.cisco.com/c/en/us/training-events/training-certifications/certifications/professional/ccnp-security-v2.html", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_82", "acronym": "CIMP", "fullName": "Identify Management Institute Certified Identity Management Professional", "details": "$295 + Membership", "href": "https://www.identitymanagementinstitute.org/cimp/", "level": "Intermediate", "domainKey": "iam" },
+  { "id": "cert_83", "acronym": "CASP+", "fullName": "CompTIA Advanced Security Practitioner+", "details": "$509 exam", "href": "https://www.comptia.org/certifications/comptia-advanced-security-practitioner", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_84", "acronym": "GASF", "fullName": "GIAC Advanced Smartphone Forensics", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/advanced-smartphone-forensics-gasf", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_85", "acronym": "eCTHP", "fullName": "eLearnSecurity Certified Threat Hunting Professional", "details": "$400 lab", "href": "https://security.ine.com/certifications/ecthp-certification/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_86", "acronym": "S-EHE", "fullName": "SECO Ethical Hacker Expert", "details": "TBD (still)\nBeing redesigned", "href": "https://www.seco-institute.org/certifications/ethical-hacking-certification-track/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_87", "acronym": "JNCIP Sec", "fullName": "Juniper Networks Certified Internet Professional, Security", "details": "$400 exam", "href": "https://www.juniper.net/us/en/training/certification/certification-tracks/junos-security-track/?tab=jncip-sec", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_88", "acronym": "PCNSE", "fullName": "Palo Alto Networks Certified Network Security Engineer", "details": "$175 exam", "href": "https://www.paloaltonetworks.com/services/education/certification#pcnse", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_89", "acronym": "FCSS ZTA", "fullName": "Fortinet Certified Solution Specialist - Zero Trust Access", "details": "$800 two exams", "href": "https://training.fortinet.com/local/staticpage/view.php?page=fcss_zta", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_90", "acronym": "FCSS SASE", "fullName": "Fortinet Certified Solution Specialist - Secure Access Service Edge", "details": "$800 two exams", "href": "https://training.fortinet.com/local/staticpage/view.php?page=fcss_SASE", "level": "Intermediate", "domainKey": "iam" },
+  { "id": "cert_91", "acronym": "FCSS PCS", "fullName": "Fortinet Certified Solution Specialist - Public Cloud Security", "details": "$400 exam", "href": "https://training.fortinet.com/local/staticpage/view.php?page=fcss_public_cloud_security", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_92", "acronym": "GCTD", "fullName": "GIAC Cloud Threat Detection", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certifications/cloud-threat-detection-gctd/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_93", "acronym": "CACE", "fullName": "Excida IEC 62443 Certified Automation Cybersecurity Expert", "details": "$700 exam", "href": "https://www.exidacace.com/Apply/CACE", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_94", "acronym": "ITIL MP", "fullName": "ITIL Managing Professional", "details": "$9,600 4 course exams\n4 branded courses requires", "href": "https://www.axelos.com/certifications/itil-certifications/itil-managing-professional-itil-4", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_95", "acronym": "Scrum SPS", "fullName": "Scrum Scaled Professional Scrum", "details": "$250 exam", "href": "https://www.scrum.org/scaled-professional-scrum-certification", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_96", "acronym": "GLEG", "fullName": "GIAC Law of Data Security & Investigations", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/law-data-security-investigations-gleg", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_97", "acronym": "CISSM", "fullName": "GAQM Certified Information Systems Security Manager", "details": "$170 exam", "href": "https://gaqm.org/certifications/information_systems_security/cissm", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_98", "acronym": "CGRC", "fullName": "(ISC)2 Certified in Governance, Risk and Compliance", "details": "$599 exam", "href": "https://www.isc2.org/Certifications/CGRC", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_99", "acronym": "CRISC", "fullName": "ISACA Certified in Risk and Information Systems Control", "details": "$760 exam", "href": "https://www.isaca.org/credentialing/crisc", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_100", "acronym": "GCCC", "fullName": "GIAC Critical Controls Certification", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/critical-controls-certification-gccc", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_101", "acronym": "PCI QSA", "fullName": "PCI Qualified Security Assessor", "details": "$3000 req'd course", "href": "https://www.pcisecuritystandards.org/assessors_and_solutions/become_qsa/", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_102", "acronym": "GWEB", "fullName": "GIAC Certified Web Application Defender", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/certified-web-application-defender-gweb", "level": "Intermediate", "domainKey": "soft" },
+  { "id": "cert_103", "acronym": "Cisco COP", "fullName": "Cisco Certified CyberOps Professional", "details": "$700 two exams", "href": "https://www.cisco.com/c/en/us/training-events/training-certifications/certifications/professional/cyberops-professional.html", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_104", "acronym": "CCFE", "fullName": "Infosec Institute Certified Computer Forensics Examiner", "details": "$4,599 exam\nCourse required", "href": "https://app.infosecinstitute.com/portal/courses/a0t1A000009H5RcQAK", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_105", "acronym": "GCED", "fullName": "GIAC Certified Enterprise Defender", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/certified-enterprise-defender-gced", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_106", "acronym": "MCPE", "fullName": "Mosse Institute Certified Cyber Protection Expert", "details": "$800 exam", "href": "https://www.mosse-institute.com/certifications/mcpe-certified-cyber-protection-expert.html", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_107", "acronym": "CREST CCTIM", "fullName": "CREST Certified Threat Intelligence Manager", "details": "$2,480 3 exams", "href": "https://www.crest-approved.org/certification-careers/crest-certifications/crest-certified-threat-intelligence-manager", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_108", "acronym": "OSCP", "fullName": "Offensive Security Certified Professional", "details": "$1,499 labs", "href": "https://www.offensive-security.com/pwk-oscp/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_109", "acronym": "F5 CSE Sec", "fullName": "F5 Big-IP Certified Solution Expert - Security", "details": "$135 exam", "href": "https://view.ceros.com/f5/certification-roadmap/p/9?heightOverride=740", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_110", "acronym": "CCNP Ent", "fullName": "Cisco Certified Network Professional - Enterprise", "details": "~$600 exam", "href": "https://www.cisco.com/c/en/us/training-events/training-certifications/certifications/professional/ccnp-enterprise.html", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_111", "acronym": "MS-100", "fullName": "Microsoft 365 Certified Enterprise Administrator Expert", "details": "$165 exam", "href": "https://docs.microsoft.com/en-us/learn/certifications/m365-enterprise-administrator", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_112", "acronym": "GPCS", "fullName": "GIAC Public Cloud Security", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certifications/public-cloud-security-gpcs/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_113", "acronym": "GCSA", "fullName": "GIAC Cloud Security Automation", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/cloud-security-automation-gcsa", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_114", "acronym": "GCWN", "fullName": "GIAC Certified Windows Security Administrator", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certifications/certified-windows-security-administrator-gcwn/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_115", "acronym": "GRID", "fullName": "GIAC Response and Industrial Defense", "details": "$979 exam\nSANS course encouraged", "href": "https://www.giac.org/certification/response-industrial-defense-grid", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_116", "acronym": "CIS LI", "fullName": "IBITGQ Certified ISO 27001 Information Security Management Specialist Lead Implementer", "details": "$2,008 course exam\nBranded course required", "href": "https://www.itgovernance.co.uk/shop/product/certified-iso-27001-isms-lead-implementer-training-course", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_117", "acronym": "CIPT", "fullName": "IAPP Certified Information Privacy Technologist", "details": "$550 exam", "href": "https://iapp.org/certify/cipt/", "level": "Intermediate", "domainKey": "asset" },
+  { "id": "cert_118", "acronym": "CDPSE", "fullName": "ISACA Certified Data Privacy Solutions Engineer", "details": "$880 Application", "href": "https://www.isaca.org/credentialing/certified-data-privacy-solutions-engineer", "level": "Intermediate", "domainKey": "asset" },
+  { "id": "cert_119", "acronym": "CSM", "fullName": "GAQM Certified Scrum Master", "details": "$128 exam", "href": "https://gaqm.org/certifications/scrum_agile/csm", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_120", "acronym": "CASM", "fullName": "GAQM Certified Agile Scrum Master", "details": "$128 exam", "href": "https://gaqm.org/certifications/scrum_agile/casm", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_121", "acronym": "CM)ISSO", "fullName": "Mile2 Certified Master Information Systems Security Officer", "details": "Complete C)SP, C)ISSO, C)ISSM and IS20 ($2200)", "href": "https://www.mile2.com/master-certifications/", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_122", "acronym": "S-ISP", "fullName": "SECO Information Security Practitioner", "details": "$550", "href": "https://www.seco-institute.org/certifications/information-security-certification-track/", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_123", "acronym": "CISA", "fullName": "ISACA Certified Information Systems Auditor", "details": "$760 exam", "href": "https://www.isaca.org/credentialing/cisa", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_124", "acronym": "GMON", "fullName": "GIAC Continuous Monitoring", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/continuous-monitoring-certification-gmon", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_125", "acronym": "CIS LA", "fullName": "IBITGQ Certified ISO 27001 Information Security Management Specialist Lead Auditor", "details": "$2,008 course exam\nBranded course required", "href": "https://www.itgovernance.co.uk/shop/product/certified-iso-27001-isms-lead-auditor-training-course", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_126", "acronym": "S-CSPL", "fullName": "SECO Secure Programming Certified Leader", "details": "$460 exam", "href": "https://www.seco-institute.org/certifications/certified-secure-software-developer/", "level": "Intermediate", "domainKey": "soft" },
+  { "id": "cert_127", "acronym": "GCDA", "fullName": "GIAC Certified Detection Analyst", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/certified-detection-analyst-gcda", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_128", "acronym": "CMFE", "fullName": "Infosec Institute Certified Mobile Forensics Examiner", "details": "$1,699 exam\nCourse required", "href": "https://app.infosecinstitute.com/portal/courses/a0t1A000009H6juQAC", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_129", "acronym": "GX-FA", "fullName": "GIAC Experienced Forensics Analyst", "details": "$1299 exam\nSANS course recommended", "href": "https://www.giac.org/certifications/experienced-forensics-analyst-gxfa/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_130", "acronym": "GCIH", "fullName": "GIAC Certified Forensics Analystr", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/gcih", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_131", "acronym": "GX-PT", "fullName": "GIAC Experienced Penetration Tester", "details": "$1299 exam\nSANS course recommended", "href": "https://www.giac.org/certifications/experienced-penetration-tester-gxpt/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_132", "acronym": "GPEN", "fullName": "GIAC Certified Penetration Tester", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/gpen", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_133", "acronym": "OSWP", "fullName": "Offensive Security Wireless Professional", "details": "$450 labs", "href": "https://www.offensive-security.com/wifu-oswp/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_134", "acronym": "CRTO", "fullName": "Zero Point Security Certified Red Team Operator", "details": "$121 lab", "href": "https://courses.zeropointsecurity.co.uk/courses/red-team-ops", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_135", "acronym": "CCSM", "fullName": "Checkpoint Certified Security Master", "details": "$350 exam", "href": "https://training-certifications.checkpoint.com/#/courses/Check%20Point%20Certified%20Master%20(CCSM)%20R80.x", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_136", "acronym": "PCSAE", "fullName": "Palo Alto Certified Cloud Security Automation Engineer", "details": "$350 exam", "href": "https://www.paloaltonetworks.com/services/education/certification", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_137", "acronym": "PCCSE", "fullName": "Prisma Certified Cloud Security Engineer", "details": "$350 exam", "href": "https://www.paloaltonetworks.com/services/education/certification", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_138", "acronym": "CIAM", "fullName": "Identify Management Institute Certified Identify and Access Manager", "details": "$390 Exam", "href": "https://www.identitymanagementinstitute.org/ciam/", "level": "Intermediate", "domainKey": "iam" },
+  { "id": "cert_139", "acronym": "FCSS SO", "fullName": "Fortinet Certified Solution Specialist - Security Operations", "details": "$400 exam", "href": "https://training.fortinet.com/local/staticpage/view.php?page=fcss_security_operations", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_140", "acronym": "PDSO CDE", "fullName": "PDSO Certified DevSecOps Expert", "details": "$1199\nExam and training bundled", "href": "https://www.practical-devsecops.com/certified-devsecops-expert", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_141", "acronym": "VCP DCV", "fullName": "VMware Certified Professional in Datacenter Virtualization", "details": "$375 exam\nBranded course required", "href": "https://www.vmware.com/education-services/certification/vcp-dcv.html", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_142", "acronym": "CKS", "fullName": "Cloud Native Computing Foundation Certified Kubernetes Security Specialist", "details": "$375 lab\nBranded course required", "href": "https://www.cncf.io/certification/cks/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_143", "acronym": "LFCS", "fullName": "Linux Foundation Certified System Administrator", "details": "$300 exam", "href": "https://training.linuxfoundation.org/certification/linux-foundation-certified-sysadmin-lfcs/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_144", "acronym": "FCSS OT", "fullName": "Fortinet Certified Solution Specialist - OT Security", "details": "$400 exam", "href": "https://training.fortinet.com/local/staticpage/view.php?page=fcss_ot_security", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_145", "acronym": "CSSA", "fullName": "Infosec Institute Certified SCADA Security Architect", "details": "$4,599 exam\nCourse required", "href": "https://app.infosecinstitute.com/portal/courses/a0tC0000000Fp4JIAS", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_146", "acronym": "Scrum PSD", "fullName": "Scrum Professional Scrum Developer", "details": "$200 exam", "href": "https://www.scrum.org/professional-scrum-developer-certification", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_147", "acronym": "GCPM", "fullName": "GIAC Certified Project Manager", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/gcpm", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_148", "acronym": "BCS PCIRM", "fullName": "BCS Practitioner Certificate in Information Risk Management", "details": "$287 exam", "href": "https://www.bcs.org/get-qualified/certifications-for-professionals/information-security-and-ccp-scheme-certifications/bcs-practitioner-certificate-in-information-risk-management/", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_149", "acronym": "PEXIN ISM", "fullName": "EXIN Information Security Management Professional", "details": "$268 exam", "href": "https://www.exin.com/certifications/information-security-management-professional-based-isoiec-27001-exam", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_150", "acronym": "MGRC", "fullName": "Mosse Institute Certified GRC Expert Certification", "details": "$450 certification programme\n100% practical. No expiry.", "href": "https://www.mosse-institute.com/certifications/mgrc-certified-grc-practitioner.html", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_151", "acronym": "CSSLP", "fullName": "(ISC)2 Certified Secure Software Lifecycle Professional", "details": "$599 exam", "href": "https://www.isc2.org/Certifications/CSSLP", "level": "Intermediate", "domainKey": "soft" },
+  { "id": "cert_152", "acronym": "MTH", "fullName": "Mosse Institute Certified Threat Hunter Certification", "details": "$450 certification programme\n100% practical. No expiry.", "href": "https://www.mosse-institute.com/certifications/mth-certified-threat-hunter.html", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_153", "acronym": "CDRP", "fullName": "Infosec Institute Certified Data Recovery Professional", "details": "$4,599 exam\nCourse required", "href": "https://app.infosecinstitute.com/portal/courses/a0tC0000000FovhIAC", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_154", "acronym": "eCDFP", "fullName": "eLearnSecurity Certified Digital Forensics Professional", "details": "$400 exam", "href": "https://security.ine.com/certifications/ecdfp-certification/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_155", "acronym": "GPYC", "fullName": "GIAC Python Coder", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/python-coder-gpyc", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_156", "acronym": "MDFIR", "fullName": "Mosse Institute Certified DFIR Specialist", "details": "$450 certification programme\n100% practical. No expiry.", "href": "https://www.mosse-institute.com/certifications/mdfir-certified-dfir-specialist.html", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_157", "acronym": "LPT", "fullName": "EC Council Licensed Penetration Tester", "details": "$899 exam", "href": "https://www.eccouncil.org/programs/licensed-penetration-tester-lpt-master/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_158", "acronym": "PNPT", "fullName": "TCM Security Practical Network Penetration Tester", "details": "$299 exam", "href": "https://certifications.tcm-sec.com/pnpt/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_159", "acronym": "GCPN", "fullName": "GIAC Cloud Penetration Tester", "details": "$2,499 exam\nSANS course recommended", "href": "https://www.giac.org/certification/gcpn", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_160", "acronym": "GRTP", "fullName": "GIAC Red Team Professional", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certifications/red-team-professional-grtp/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_161", "acronym": "SOG CAPenX", "fullName": "The SecurityOps Group Certified AppSec Pentesting eXpert", "details": "$800 exam", "href": "https://secops.group/product/certified-appsec-pentesting-expert-capenx/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_162", "acronym": "GMOB", "fullName": "GIAC Mobile Device Security Analyst", "details": "$399 exam\nSANS course recommended", "href": "https://www.giac.org/certification/mobile-device-security-analyst-gmob", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_163", "acronym": "FCSS NS", "fullName": "Fortinet Certificed Solution Specialist - Network Security", "details": "$800 two exams", "href": "https://training.fortinet.com/local/staticpage/view.php?page=fcss_network_security", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_164", "acronym": "CIDPRO", "fullName": "IDPro Certified Identity Professional", "details": "$700 exam", "href": "https://idpro.org/cidpro/", "level": "Intermediate", "domainKey": "iam" },
+  { "id": "cert_165", "acronym": "CCSP", "fullName": "(ISC)2 Certified Cloud Security Professional", "details": "$599 exam", "href": "https://www.isc2.org/Certifications/CCSP", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_166", "acronym": "FCP PCS", "fullName": "Fortinet Certified Professional - Public Cloud Security", "details": "$400 for 2 exams", "href": "https://training.fortinet.com/local/staticpage/view.php?page=fcp_public_cloud_security", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_167", "acronym": "FCP SO", "fullName": "Fortinet Certified Professional - Security Operations", "details": "$400 for 2 exams", "href": "https://training.fortinet.com/local/staticpage/view.php?page=fcp_security_operations", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_168", "acronym": "RHCSA", "fullName": "Red Hat Certified System Administrator", "details": "$400 exam", "href": "https://www.redhat.com/en/services/certification/rhcsa", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_169", "acronym": "ISA CDS", "fullName": "ISA Certified Design Specialist", "details": "$2,700 course + exam", "href": "https://www.isa.org/training-and-certifications/isa-certification/isa99iec-62443/isa99iec-62443-cybersecurity-certificate-programs/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_170", "acronym": "SFCTA", "fullName": "Salesforce Certified Technical Architect", "details": "$6000\nMust be SF SA Certified", "href": "https://trailhead.salesforce.com/help?article=Salesforce-Certified-Technical-Architect-Exam-Guide", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_171", "acronym": "EPDPP", "fullName": "EXIN Privacy and Data Protection Practitioner", "details": "$243 Exam\nCourse req'd", "href": "https://embed.exin.totalservices.io/certifications/exin-privacy-and-data-protection-practitioner-exam", "level": "Intermediate", "domainKey": "asset" },
+  { "id": "cert_172", "acronym": "M_o_R P", "fullName": "Axelos M_o_R Practitioner Risk Management", "details": "$560 exam", "href": "https://www.axelos.com/certifications/propath/mor-risk-management/mor-4-practitioner", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_173", "acronym": "CPD", "fullName": "GAQM Certified Project Director", "details": "$210 exam", "href": "https://gaqm.org/certifications/project_management/cpd", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_174", "acronym": "PMI ACP", "fullName": "PMI Agile Certified Practitioner", "details": "$495 exam", "href": "https://www.pmi.org/certifications/types/agile-acp", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_175", "acronym": "EISM", "fullName": "EC Council Information Security Manager", "details": "$3,499\nBranded course required", "href": "https://ciso.eccouncil.org/cciso-certification/eism-program/", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_176", "acronym": "CGEIT", "fullName": "ISACA Certified in the Governance of Enterprise IT", "details": "$760 exam", "href": "https://www.isaca.org/credentialing/cgeit", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_177", "acronym": "EXIN 27001E", "fullName": "EXIN ISO/IEC 27001 Expert", "details": "~$379 Oral Presentation", "href": "https://www.exin.com/certifications/information-security-management-expert-based-isoiec-27001-exam?language_content_entity=en", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_178", "acronym": "PECB 27005LM", "fullName": "PECB ISO/IEC 27005 Lead Risk Manager", "details": "~$1,595 exam\nCourse required", "href": "https://pecb.com/en/education-and-certification-for-individuals/iso-iec-27005/iso-27005-lead-risk-manager", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_179", "acronym": "DCCRP", "fullName": "DRI Certified Cyber Resilience Professional", "details": "$400 Exam", "href": "https://drii.org/certification/ccrp", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_180", "acronym": "GCIA", "fullName": "GIAC Certified Intrusion Analyst", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/certified-intrusion-analyst-gcia", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_181", "acronym": "CTPRA", "fullName": "Shared Assessment Certified Third-Party Risk Assessor", "details": "$1295 course", "href": "https://sharedassessments.org/ctpra/", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_182", "acronym": "PECB 27001LA", "fullName": "PECB ISO/IEC 27001 Lead Auditor", "details": "$930 exam\nCourse required", "href": "https://pecb.com/en/education-and-certification-for-individuals/iso-iec-27001/iso-iec-27001-lead-auditor", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_183", "acronym": "DevNet Pro", "fullName": "Cisco DevNet Professional", "details": "$1200 two exams\nDevNet Associate req'd", "href": "https://www.cisco.com/site/us/en/learn/training-certifications/certifications/devnet/professional/index.html", "level": "Intermediate", "domainKey": "soft" },
+  { "id": "cert_184", "acronym": "SC-400", "fullName": "Microsoft Certified Information Protection Administrator Associate", "details": "$165 exam", "href": "https://docs.microsoft.com/en-us/learn/certifications/information-protection-administrator/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_185", "acronym": "CCE", "fullName": "ISFCE Certified Computer Examiner", "details": "$485 written exam", "href": "https://www.isfce.com/certification.htm", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_186", "acronym": "CM)DFI", "fullName": "Mile2 Certified Master Digital Forensic Investigator", "details": "Complete C)SP, C)DFE, C)NFE and C)CSA ($2200)", "href": "https://www.mile2.com/master-certifications/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_187", "acronym": "CREST CRIA", "fullName": "CREST Registered Intrusion Analyst", "details": "$612 exam & lab", "href": "https://www.crest-approved.org/certification-careers/crest-certifications/crest-registered-intrusion-analyst", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_188", "acronym": "CREST CRTIA", "fullName": "CREST Registered Threat Intelligence Analyst", "details": "$615 2 exams", "href": "https://www.crest-approved.org/certification-careers/crest-certifications/crest-registered-threat-intelligence-analyst", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_189", "acronym": "GWAPT", "fullName": "GIAC Web Application Penetration Tester", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/gwapt", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_190", "acronym": "OSMR", "fullName": "Offensive Security MacOS Researcher", "details": "$2,499 exam\nLearning subscription required", "href": "https://www.offensive-security.com/exp312-osmr/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_191", "acronym": "GCPT", "fullName": "GAQM Certified Penetration Tester", "details": "$128 exam", "href": "https://gaqm.org/certifications/information_systems_security/certified_penetration_tester_cpt", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_192", "acronym": "CCPenX-AWS", "fullName": "The SecurityOps Group Certified Cloud Pentesting eXpert-AWS", "details": "$800 exam", "href": "https://secops.group/product/certified-cloud-pentesting-expert/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_193", "acronym": "CCSE", "fullName": "Checkpoint Certified Security Expert", "details": "$250 exam", "href": "https://training-certifications.checkpoint.com/#/courses/Check%20Point%20Certified%20Expert%20(CCSE)%20R80.x", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_194", "acronym": "AWS CSS", "fullName": "Amazon Web Services Certified Security - Specialty", "details": "$150 exam", "href": "https://aws.amazon.com/certification/certified-security-specialty/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_195", "acronym": "SFCCCC", "fullName": "SalesForce Certified Community Cloud Consultant", "details": "$200 exam\nMust be SalesForce Admin Certified", "href": "https://trailhead.salesforce.com/help?article=Salesforce-Certified-Community-Cloud-Consultant-Exam-Guide", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_196", "acronym": "EXIN PCSA", "fullName": "EXIN Professional Cloud Solution Architect", "details": "$315 exam", "href": "https://www.exin.com/certifications/ccc-professional-cloud-solution-architect-exam", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_197", "acronym": "CKA", "fullName": "Cloud Native Computing Foundation Certified Kubernetes Administrator", "details": "$375 lab\nBranded course required", "href": "https://www.cncf.io/certification/cka/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_198", "acronym": "TUV COTCP", "fullName": "TUV Rheinland Certified Operational Technology Cybersecurity Professional (GERMAN)", "details": "$415 exam", "href": "https://www.tuv.com/landingpage/en/lp-certified-operational-technology-cybersecurity-professional-program/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_199", "acronym": "SABSA SCF", "fullName": "SABSA Chartered Security Architect - Foundation Certificate", "details": "$3,750 exam\nBranded course required", "href": "https://sabsa.org/certification/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_200", "acronym": "CIPA", "fullName": "IMI Certified Identity Protection comptia-advanced-security-practitioner", "details": "$295 Exam", "href": "https://www.identitymanagementinstitute.org/cipa/", "level": "Intermediate", "domainKey": "asset" },
+  { "id": "cert_201", "acronym": "DCPP", "fullName": "DSCI Certified Privacy Professional", "details": "$205 Exam", "href": "https://www.dsci.in/content/dsci-certified-privacy-professional-dcpp", "level": "Intermediate", "domainKey": "asset" },
+  { "id": "cert_202", "acronym": "Scrum PAL", "fullName": "Scrum  Professional Agile Leadership", "details": "$200 exam", "href": "https://www.scrum.org/professional-agile-leadership-certification", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_203", "acronym": "CAPM", "fullName": "PMI Certified Associate in Project Management", "details": "$300 exam", "href": "https://www.pmi.org/certifications/types/certified-associate-capm", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_204", "acronym": "PSM II", "fullName": "Scrum.org Professional Scrum Master II", "details": "$250 exam", "href": "https://www.scrum.org/assessments/professional-scrum-master-ii-certification", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_205", "acronym": "APMG 20000P", "fullName": "APMG ISO/IEC 20000 Practitioner", "details": "$308 Exam\nFoundation or ITIL req'd", "href": "https://apmg-international.com/product/iso-iec-20000", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_206", "acronym": "C)ISRM", "fullName": "Mile2 Certified Information Systems Risk Manager", "details": "$550 exam", "href": "https://www.mile2.com/information-systems-risk-mangager-outline/", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_207", "acronym": "APMG 27001P", "fullName": "APMG ISO/IEC 27001 Practitioner", "details": "$400 exam\nApplication essay", "href": "https://apmg-international.com/product/isoiec-27001", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_208", "acronym": "PECB 27001LI", "fullName": "PECB ISO/IEC 27001 Lead Implementer", "details": "$930 exam\nCourse required", "href": "https://pecb.com/en/education-and-certification-for-individuals/iso-iec-27001/iso-iec-27001-lead-implementer", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_209", "acronym": "IS20", "fullName": "Mile2 IS20 Controls", "details": "$550 exam", "href": "https://www.mile2.com/is20_outline/", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_210", "acronym": "C)ISSA", "fullName": "Mile2 Certified Information Systems Security Auditor", "details": "$550 exam", "href": "https://www.mile2.com/information_systems_security_auditor_outline/", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_211", "acronym": "APMG 27001A", "fullName": "APMG ISO/IEC 27001 Auditor", "details": "$400 exam\nApplication essay", "href": "https://apmg-international.com/product/isoiec-27001", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_212", "acronym": "CASE", "fullName": "EC Council Certified Application Security Engineer (.NET or Java)", "details": "$550 exam", "href": "https://www.eccouncil.org/programs/certified-application-security-engineer-case/", "level": "Intermediate", "domainKey": "soft" },
+  { "id": "cert_213", "acronym": "C)DRE", "fullName": "Mile2 Certified Disaster Recovery Engineer", "details": "$550 exam", "href": "https://www.mile2.com/cdre_outline/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_214", "acronym": "GSOC", "fullName": "GIAC Security Operations Certified", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certifications/security-operations-certified-gsoc/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_215", "acronym": "GBFA", "fullName": "GIAC Battlefield Forensics and Acquisition", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/gbfa", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_216", "acronym": "BTL1", "fullName": "Security Blue Team Level 1", "details": "$660 course\n1 exam attempt included", "href": "https://www.securityblue.team/why-btl1/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_217", "acronym": "MBT", "fullName": "Mosse Institute Certified Blue Teamer Certification", "details": "$450 certification programme\n100% practical. No expiry.", "href": "https://www.mosse-institute.com/certifications/mbt-certified-blue-teamer.html", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_218", "acronym": "MPT", "fullName": "Mosse Institute Certified Penetration Tester Certification", "details": "$450 certification programme\n100% practical. No expiry.", "href": "https://www.mosse-institute.com/certifications/mpt-certified-penetration-tester.html", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_219", "acronym": "CPENT", "fullName": "EC Council Certified Penetration Testing Professional", "details": "$999 exam", "href": "https://www.eccouncil.org/programs/certified-penetration-testing-professional-cpent/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_220", "acronym": "CREST CCTAPP", "fullName": "CREST Certified Web Application Tester", "details": "$2,520 exam & lab", "href": "https://www.crest-approved.org/certification-careers/crest-certifications/crest-certified-web-application-tester/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_221", "acronym": "HTB CPTS", "fullName": "Hack the Box Certified Penetration Testing Specialist", "details": "$200 modules + $210 exam\n$490 Subscription available", "href": "https://academy.hackthebox.com/preview/certifications/htb-certified-penetration-testing-specialist/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_222", "acronym": "MRE", "fullName": "Mosse Institute Certified Reverse Engineer Certification", "details": "$450 certification programme\n100% practical. No expiry.", "href": "https://www.mosse-institute.com/certifications/mre-certified-reverse-engineer.html", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_223", "acronym": "JNCIS Sec", "fullName": "Juniper Networks Certified Internet Specialist, Security", "details": "$300 exam", "href": "https://www.juniper.net/us/en/training/certification/certification-tracks/junos-security-track/?tab=jncisec", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_224", "acronym": "Programming Language", "fullName": "Learning a programming language is valuable to any IT professionals career.", "details": "Recommendations: Python, Ruby, C++", "href": "https://www.learnpython.org/", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_225", "acronym": "GMLE", "fullName": "GIAC Machine Learning Engineer", "details": "$979 exam", "href": "https://www.giac.org/certifications/machine-learning-engineer-gmle/", "level": "Intermediate", "domainKey": "soft" },
+  { "id": "cert_226", "acronym": "CREST CCHIA", "fullName": "CREST Certified Host intrustion Analyst", "details": "$2,481 exam & essay\nHands on exam in UK", "href": "https://www.crest-approved.org/certification-careers/crest-certifications/crest-certified-host-intrusion-analyst", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_227", "acronym": "EnCE", "fullName": "OpenText EnCase Certified Examiner", "details": "$200 two exams", "href": "https://www.opentext.com/products-and-solutions/services/training-and-learning-services/encase-training/examiner-certification", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_228", "acronym": "ACE", "fullName": "AccessData Certified Examiner", "details": "$100 + software", "href": "https://accessdata.com/training/computer-forensics-certification", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_229", "acronym": "eCIR", "fullName": "eLearnSecurity Certified Incident Responder", "details": "$400 lab", "href": "https://security.ine.com/certifications/ecir-certification/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_230", "acronym": "C)IHE", "fullName": "Mile2 Certified Incident Handling Engineer", "details": "$550 exam", "href": "https://www.mile2.com/cihe_outline/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_231", "acronym": "CSTL", "fullName": "Cyber Scheme Team Leader", "details": "$1945 exam", "href": "https://thecyberscheme.org/cyber-scheme-team-leader-cstl-exam/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_232", "acronym": "eCPPT", "fullName": "eLearnSecurity Certified Professional Penetration Tester", "details": "$400 lab", "href": "https://security.ine.com/certifications/ecppt-certification/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_233", "acronym": "eWPT", "fullName": "eLearnSecurity Web Application Penetration Tester", "details": "$400 lab", "href": "https://security.ine.com/certifications/ewpt-certification/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_234", "acronym": "CM)IPS", "fullName": "Mile2 Certified Master Intrusion Prevention Specialist", "details": "Complete C)VA, C)PEH, C)PTE and C)PTC ($2200)", "href": "https://www.mile2.com/master-certifications/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_235", "acronym": "HTB CBBH", "fullName": "Hack the Box Certified Bug Bounty Hunter", "details": "$145 modules + $210 exam\n$490 Subscription available", "href": "https://academy.hackthebox.com/preview/certifications/htb-certified-bug-bounty-hunter/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_236", "acronym": "PJMR", "fullName": "Practical Junior Malware Researcher", "details": "$399 lab", "href": "https://certifications.tcm-sec.com/pjmr/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_237", "acronym": "F5 CTS APM", "fullName": "F5 Big-IP Certified Technical Specialist - Access Policy Manager", "details": "$135 exam", "href": "https://view.ceros.com/f5/certification-roadmap/p/9?heightOverride=740", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_238", "acronym": "FCP NS", "fullName": "Fortinet Certified Professional - Network Security", "details": "$400 for 2 exams", "href": "https://training.fortinet.com/local/staticpage/view.php?page=fcp_network_security", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_239", "acronym": "CCNA", "fullName": "Cisco Certified Network Associate", "details": "~$330 exam", "href": "https://www.cisco.com/c/en/us/training-events/training-certifications/certifications/associate/ccna.html", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_240", "acronym": "AZ-500", "fullName": "Microsoft Azure Security Engineer Associate", "details": "$165 exam", "href": "https://docs.microsoft.com/en-us/learn/certifications/azure-security-engineer?wt.mc_id=learningredirect_certs-web-wwl", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_241", "acronym": "CSA CGC", "fullName": "Cloud Security Alliance Cloud Governance & Compliance", "details": "$315 exam", "href": "https://cloudsecurityalliance.org/education/cloud-governance-and-compliance/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_242", "acronym": "VCP NV", "fullName": "VMware Certified Professional in Network Virtualization", "details": "$375 exam\nBranded course required", "href": "https://www.vmware.com/education-services/certification/vcp-nv-tracks.html", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_243", "acronym": "CKAD", "fullName": "Cloud Native Computing Foundation Certified Kubernetes Application Developer", "details": "$375 lab\nBranded course required", "href": "https://www.cncf.io/certification/ckad/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_244", "acronym": "LPIC-2", "fullName": "Linux Professional Institute Certified: Linux Engineer", "details": "$400 2 exams", "href": "https://www.lpi.org/our-certifications/lpic-2-overview", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_245", "acronym": "GCIP", "fullName": "GIAC Critical Infrastructure Protection", "details": "$979 exam\nSANS course encouraged", "href": "https://www.giac.org/certification/critical-infrastructure-protection-gcip", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_246", "acronym": "CIMP", "fullName": "IMI Certified Identity Management Professional", "details": "$295 Exam", "href": "https://www.identitymanagementinstitute.org/cimp/", "level": "Intermediate", "domainKey": "asset" },
+  { "id": "cert_247", "acronym": "CDP", "fullName": "IMI Certified in Data Protection", "details": "$395 Exam", "href": "https://www.identitymanagementinstitute.org/cdp/", "level": "Intermediate", "domainKey": "asset" },
+  { "id": "cert_248", "acronym": "CCP", "fullName": "EC First Certified CCMC Professional", "details": "$2,995 exam\nCourse required", "href": "https://ecfirst.biz/index.php?route=product/product&path=59_83&product_id=281", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_249", "acronym": "C)ISSO", "fullName": "Mile2 Certified Information Systems Security Officer", "details": "$550 exam", "href": "https://www.mile2.com/cisso_outline/", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_250", "acronym": "CIS RM", "fullName": "IBITGQ Certified ISO 27005 Information Security Management Specialist Risk Management", "details": "$2,783 course exam\nBranded course required", "href": "https://www.itgovernance.co.uk/shop/product/iso-27005-certified-isms-risk-management", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_251", "acronym": "EXIN 27001P", "fullName": "EXIN ISO/IEC 27001 Professional", "details": "$279 exam", "href": "https://www.exin.com/certifications/information-security-management-professional-based-isoiec-27001-exam", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_252", "acronym": "PECB 27032CM", "fullName": "PECB ISO/IEC 27032 Lead Cybersecurity Manager", "details": "$899-$2,999 course exam\nCourse required", "href": "https://pecb.com/en/education-and-certification-for-individuals/iso-iec-27032/iso-iec-27032-lead-cyber-security-manager", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_253", "acronym": "C)HISSP", "fullName": "Mile2 Certified Healthcare Information Systems Security Practitioner", "details": "$550 exam", "href": "https://www.mile2.com/chissp_outline/", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_254", "acronym": "APMG 20000A", "fullName": "APMG ISO/IEC 20000 Auditor", "details": "$308 Exam\nPossible Course Req", "href": "https://apmg-international.com/product/iso-iec-20000", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_255", "acronym": "C)ISMS-LA", "fullName": "Mile2 Certified Information security Management Systems Lead Auditor", "details": "$550 exam", "href": "https://www.mile2.com/cisms-la-li-outline/", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_256", "acronym": "CIS IA", "fullName": "IBITGQ Certified ISO 27001 Information Security Management Specialist Internal Auditor", "details": "$1543 course exam\nBranded course required", "href": "https://www.itgovernance.co.uk/shop/product/iso27001-certified-isms-internal-auditor-training-course", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_257", "acronym": "CASST", "fullName": "GAQM Certified Advanced Software Security Tester", "details": "$210 exam", "href": "https://gaqm.org/certifications/software_security_testing/casst", "level": "Intermediate", "domainKey": "soft" },
+  { "id": "cert_258", "acronym": "OSIP", "fullName": "IntelTechniques Open Source Intelligence Professional", "details": "$300 practical exam", "href": "https://inteltechniques.com/training-osip.html", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_259", "acronym": "Cisco COA", "fullName": "Cisco Certified CyberOps Associate Cyber Operations", "details": "~$325 exam", "href": "https://www.cisco.com/c/en/us/training-events/training-certifications/certifications/associate/cyberops-associate.html", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_260", "acronym": "C)CSA", "fullName": "Mile2 Certified Cybersecurity Analyst", "details": "$550 exam", "href": "https://www.mile2.com/ccsa_outline/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_261", "acronym": "CHFI", "fullName": "EC Council Computer Hacking Forensics Investigator", "details": "$650 exam", "href": "https://www.eccouncil.org/programs/computer-hacking-forensic-investigator-chfi/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_262", "acronym": "S-TA", "fullName": "SECO Certified Threat Analyst", "details": "$550 exam", "href": "https://www.seco-institute.org/get-trained/cyber-defense-track/threat-analyst-certification/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_263", "acronym": "ECIH", "fullName": "EC Council Certified Incident Handler", "details": "$300 exam", "href": "https://www.eccouncil.org/programs/ec-council-certified-incident-handler-ecih/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_264", "acronym": "C)PSH", "fullName": "Mile2 Certified Powershell Hacker", "details": "$550 exam", "href": "https://www.mile2.com/cpSH_outline/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_265", "acronym": "CMWAPT", "fullName": "Infosec Institute Certified Mobile and Web App Penetration Tester", "details": "$4,599 exam\nCourse required", "href": "https://app.infosecinstitute.com/portal/courses/a0tC0000000Fow6IAC", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_266", "acronym": "C)PTC", "fullName": "Mile2 Certified Penetration Testing Consultant", "details": "$550 exam", "href": "https://mile2.com/cptc_outline/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_267", "acronym": "CRTOP", "fullName": "Infosec Institute Certified Red Team Operations Professional", "details": "$4,599 exam\nCourse required", "href": "https://app.infosecinstitute.com/portal/courses/a0t0y00000BK8IcAAL", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_268", "acronym": "CSR", "fullName": "Cyber Struggle Ranger", "details": "Location Based Cost\nCourse Req", "href": "https://cyberstruggle.org/ranger-certification/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_269", "acronym": "F5 CTS DNS", "fullName": "F5 Big-IP Certified Technical Specialist - Domain Name Services", "details": "$135 exam", "href": "https://view.ceros.com/f5/certification-roadmap/p/9?heightOverride=740", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_270", "acronym": "PCDRA", "fullName": "Palo Alto Networks Certified Detection and Remediation Analyst", "details": "$155 exam", "href": "https://www.paloaltonetworks.com/services/education/certification", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_271", "acronym": "SF CIAMD", "fullName": "SalesForce Certified Identity and Access Management Designer", "details": "$400 exam", "href": "https://trailhead.salesforce.com/help?article=Salesforce-Certified-Identity-and-Access-Management-Designer-Exam-Guide", "level": "Intermediate", "domainKey": "iam" },
+  { "id": "cert_272", "acronym": "GCLD", "fullName": "GIAC Cloud Security Essentials", "details": "$979 exam SANS course recommended", "href": "https://www.giac.org/certifications/cloud-security-essentials-gcld/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_273", "acronym": "AWS SAA", "fullName": "Amazon Web Services Certified Solutions Architect - Associate", "details": "$150 exam", "href": "https://aws.amazon.com/certification/certified-solutions-architect-associate/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_274", "acronym": "EXIN PCSerM", "fullName": "EXIN Professional Cloud Service Manager", "details": "$315 exam", "href": "https://www.exin.com/certifications/ccc-professional-cloud-service-manager-exam", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_275", "acronym": "ISA CRAS", "fullName": "ISA Certified Risk Assesment Specialist", "details": "$2,700 course + exam\nCourse required", "href": "https://www.isa.org/training-and-certifications/isa-certification/isa99iec-62443/isa99iec-62443-cybersecurity-certificate-programs/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_276", "acronym": "SPLK-3001", "fullName": "Splunk Enterprise Security Certified Administrator", "details": "$130 exam\nBranded course recommended", "href": "https://www.splunk.com/en_us/training/certification-track/splunk-es-certified-admin.html", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_277", "acronym": "BCS PCIAA", "fullName": "BCS Practitioner Certificate in Information Assurance Architecture", "details": "$290 exam", "href": "https://www.bcs.org/get-qualified/certifications-for-professionals/information-security-and-ccp-scheme-certifications/bcs-practitioner-certificate-in-information-assurance-architecture/", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_278", "acronym": "CCSA", "fullName": "EC First Certified Cyber Security Architect", "details": "$695 exam", "href": "https://ecfirst.biz/index.php?route=product/product&path=59_61&product_id=77", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_279", "acronym": "PPM", "fullName": "GAQM Professional in Project Management", "details": "$210 exam", "href": "https://gaqm.org/certifications/project_management/ppm", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_280", "acronym": "C)ISSM", "fullName": "Mile2 Certified Information Systems Security Manager", "details": "$550 exam", "href": "https://mile2.com/cissm_outline/", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_281", "acronym": "TUV ITSM", "fullName": "TUV IT Security Manager (GERMAN)", "details": "$415 exam\nCourse required", "href": "https://www.certipedia.com/quality_marks/0000063483?locale=en", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_282", "acronym": "CCRMP", "fullName": "IBITGQ Certified in Managing Cyber Security Risk", "details": "$2,629 course exam\nBranded course required", "href": "https://www.itgovernance.co.uk/shop/product/managing-cyber-security-risk-training-course", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_283", "acronym": "PECB 27005RM", "fullName": "PECB ISO/IEC 27005 Risk Manager", "details": "~$995 exam\nCourse required", "href": "https://pecb.com/en/education-and-certification-for-individuals/iso-iec-27005/iso-iec-27005-risk-manager", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_284", "acronym": "CSBA", "fullName": "QAI Certified Software Business Analyst", "details": "$350 exam + written essay", "href": "https://www.softwarecertifications.org/csba/", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_285", "acronym": "DCBCLA", "fullName": "DRI Certified Business Continuity Lead Auditor", "details": "$400 exam\nApplication req", "href": "https://drii.org/certification/cbcla", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_286", "acronym": "TUV MSA", "fullName": "TUV Rheinland Mobile Security Analyst (GERMAN)", "details": "$415 exam\nCourse required", "href": "https://www.certipedia.com/quality_marks/0000046324?locale=en", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_287", "acronym": "DevNet A", "fullName": "Cisco DevNet Associate", "details": "$300 Exam", "href": "https://www.cisco.com/site/us/en/learn/training-certifications/certifications/devnet/associate/index.html", "level": "Intermediate", "domainKey": "soft" },
+  { "id": "cert_288", "acronym": "CySA+", "fullName": "CompTIA Cybersecurity Analyst+", "details": "$404 exam", "href": "https://www.comptia.org/certifications/cybersecurity-analyst", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_289", "acronym": "CSX-P", "fullName": "ISACA Cybersecurity Practitioner", "details": "$549 lab", "href": "https://cybersecurity.isaca.org/csx-certifications/csx-practitioner-certification", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_290", "acronym": "C)NFE", "fullName": "Mile2 Certified Network Forensics Examiner", "details": "$550 exam\nGroups only", "href": "https://www.mile2.com/network-forensics-examiner-outline/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_291", "acronym": "GOSI", "fullName": "GIAC Open Source Intelligence", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/open-source-intelligence-gosi", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_292", "acronym": "C)TIA", "fullName": "Mile2 Certified Threat Intelligence Analyst", "details": "$550 exam", "href": "https://www.mile2.com/threat-analyst/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_293", "acronym": "OSDA", "fullName": "Offensive Security Defense Analyst", "details": "$2,499 exam\nLearning subscription required", "href": "https://www.offensive-security.com/soc200-osda/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_294", "acronym": "eMAPT", "fullName": "eLearnSecurity Mobile Application Penetration Tester", "details": "$400", "href": "https://security.ine.com/certifications/emapt-certification/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_295", "acronym": "BSCP", "fullName": "Portswigger Burp Suite Certified Practioner", "details": "$99 exam", "href": "https://portswigger.net/web-security/certification", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_296", "acronym": "OPST", "fullName": "ISECOM OSSTMM Professional Security Tester", "details": "Unknown", "href": "https://www.isecom.org/certification.html", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_297", "acronym": "OSWA", "fullName": "Offensive Security Web Assessor", "details": "$2,499 Exam\nLearning subscription required", "href": "https://www.offensive-security.com/web200-oswa/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_298", "acronym": "CREA", "fullName": "Infosec Institute Certified Reverse Engineering Analyst", "details": "$4,599 exam\nCourse required", "href": "https://app.infosecinstitute.com/portal/courses/a0tC0000000Fp4IIAS", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_299", "acronym": "CWSP", "fullName": "CWNP Certified Wireless Security Professional", "details": "$325 exam", "href": "https://www.cwnp.com/certifications/cwsp", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_300", "acronym": "CREST CCNIA", "fullName": "CREST Certified Network Intrusion Analyst", "details": "$2,481 exam & essay\nHands on exam in UK", "href": "https://www.crest-approved.org/certification-careers/crest-certifications/crest-certified-network-intrusion-analyst", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_301", "acronym": "CIGE", "fullName": "IMI Certified Identity Governance Expert", "details": "$395 exam", "href": "https://www.identitymanagementinstitute.org/cige/", "level": "Intermediate", "domainKey": "iam" },
+  { "id": "cert_302", "acronym": "AZ-104", "fullName": "Microsoft Azure Administrator Associate", "details": "$165 exam", "href": "https://docs.microsoft.com/en-us/learn/certifications/azure-administrator?wt.mc_id=learningredirect_certs-web-wwl", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_303", "acronym": "CLCSM", "fullName": "PECB Lead Cloud Security Manager", "details": "~$930 exam\nCourse required", "href": "https://pecb.com/en/education-and-certification-for-individuals/cloud-security/lead-cloud-security-manager", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_304", "acronym": "CCSE", "fullName": "EC Council Certified Cloud Security Engineer", "details": "$100 exam\nEC Council Course Recommended", "href": "https://cert.eccouncil.org/certified-cloud-security-engineer.html", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_305", "acronym": "MCSE", "fullName": "Mosse Institute Cloud Security Engineer", "details": "$600 exam", "href": "https://www.mosse-institute.com/certifications/mcse-certified-cloud-security-engineer.html", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_306", "acronym": "SFSA", "fullName": "SalesForce System Architect", "details": "$400 hands-on lab", "href": "https://trailhead.salesforce.com/credentials/systemarchitect", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_307", "acronym": "ASIS APP", "fullName": "ASIS Associate Protection Professional", "details": "$350 exam", "href": "https://www.asisonline.org/certification/associate-protection-professional-app/", "level": "Intermediate", "domainKey": "asset" },
+  { "id": "cert_308", "acronym": "CNDA", "fullName": "EC Council Certified Network Defense Architect", "details": "$200 application\nRequires CEH cert", "href": "https://www.eccouncil.org/programs/certified-network-defense-architect-cnda/", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_309", "acronym": "DACRP", "fullName": "DRI Associate Cyber Resilience Professional", "details": "$200 exam\nCourse req", "href": "https://drii.org/certification/acrp", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_310", "acronym": "CISRM", "fullName": "IBITGQ Certified ISO 27005 Information Security Management Specialist Risk Management", "details": "$2,783 course exam\nBranded course required", "href": "https://www.itgovernance.co.uk/shop/product/iso-27005-certified-isms-risk-management", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_311", "acronym": "DCRMP", "fullName": "DRI Certified Risk Management Professional", "details": "$400 exam\nApplication essay", "href": "https://drii.org/certification/crmp", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_312", "acronym": "SSAP", "fullName": "SANS Security Awareness Professional", "details": "$1219 Exam\nSANS MGT433 course recommended", "href": "https://www.sans.org/security-awareness-training/career-development/credential/", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_313", "acronym": "GRCP", "fullName": "OCEG Governance, Risk, and Compliance Professional", "details": "$399 12 month license", "href": "https://www.oceg.org/certifications/grc-professional-certification/", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_314", "acronym": "SACP", "fullName": "The H Layer Security Awareness and Culture Professional", "details": "$369 Exam", "href": "https://www.thehlayer.com/about-exam/", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_315", "acronym": "CISP", "fullName": "GAQM Certified Information Security Professional", "details": "$170 exam", "href": "https://gaqm.org/certifications/information_systems_security/cisp", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_316", "acronym": "TUV Auditor", "fullName": "TUV Rheinland IT Security Auditor (GERMAN)", "details": "$415 exam\nCourse required", "href": "https://www.certipedia.com/quality_marks/0000063484?locale=en", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_317", "acronym": "CTPRP", "fullName": "Shared Assessment Certified Third-Party Risk Professional", "details": "$1295 course", "href": "https://sharedassessments.org/ctprp/", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_318", "acronym": "IIA CIA", "fullName": "The Institute of Internal Auditors Certified Internal Auditor", "details": "$1315 3 exams", "href": "https://na.theiia.org/certification/CIA-Certification/Pages/CIA-Certification.aspx", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_319", "acronym": "CCSC", "fullName": "CertNexus Cyber Secure Coder", "details": "$300 exam", "href": "https://certnexus.com/certification/cyber-secure-coder/", "level": "Intermediate", "domainKey": "soft" },
+  { "id": "cert_320", "acronym": "SC-200", "fullName": "Microsoft Certified: Security Operations Analyst Associate", "details": "~$165 exam", "href": "https://docs.microsoft.com/en-us/learn/certifications/security-operations-analyst/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_321", "acronym": "MRCI", "fullName": "Mosse Institute Remote Cybersecurity Internship Programme", "details": "$49 certification programme\n100% practical. No expiry.", "href": "https://www.mosse-institute.com/certifications/mrci-remote-cybersecurity-internship.html", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_322", "acronym": "EDRP", "fullName": "EC Council Disaster Recovery Professional", "details": "$450 exam", "href": "https://www.eccouncil.org/programs/disaster-recovery-professional-edrp/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_323", "acronym": "HTB CDSA", "fullName": "Hack the Box Certified Defensive Security Analyst", "details": "$145 modules + $210 exam\n$490 Subscription available", "href": "https://academy.hackthebox.com/preview/certifications/htb-certified-defensive-security-analyst", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_324", "acronym": "CFR", "fullName": "CertNexus CyberSec First Responder", "details": "$250 exam", "href": "https://certnexus.com/certification/cybersec-first-responder/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_325", "acronym": "CTIA", "fullName": "EC Council Certified Threat intelligence Analyst", "details": "$450 exam", "href": "https://www.eccouncil.org/programs/certified-threat-intelligence-analyst-ctia/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_326", "acronym": "CSTM", "fullName": "Cyber Scheme Team Member", "details": "$610 exam", "href": "https://thecyberscheme.org/cyber-scheme-team-member-cstm-exam/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_327", "acronym": "eJPT", "fullName": "eLearnSecurity Junior Penetration Tester", "details": "$249 lab", "href": "https://ine.com/learning/certifications/internal/elearnsecurity-junior-penetration-tester-v2", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_328", "acronym": "S-EHP", "fullName": "SECO Ethical Hacking Practitioner", "details": "$550 exam", "href": "https://www.seco-institute.org/certifications/ethical-hacking-track/practitioner/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_329", "acronym": "CHAT", "fullName": "ISECOM Certified Hacker Analyst Trainer", "details": "$100 annual sub\nUnknown exam price", "href": "https://www.isecom.org/certification.html", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_330", "acronym": "CREST CPSA", "fullName": "CREST Practitioner Security Analyst", "details": "$425 exam", "href": "https://www.crest-approved.org/certification-careers/crest-certifications/crest-practitioner-security-analyst", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_331", "acronym": "F5 CA", "fullName": "F5 Big-IP Certified Administrator", "details": "$135 exam", "href": "https://view.ceros.com/f5/certification-roadmap/p/9?heightOverride=740", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_332", "acronym": "eNDP", "fullName": "eLearnSecurity Network Defense Professional", "details": "$400 exam", "href": "https://www.elearnsecurity.com/certification/endp/", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_333", "acronym": "CIST", "fullName": "IMI Certfied Identity and Security Technologist", "details": "$295 exam", "href": "https://www.identitymanagementinstitute.org/cist/", "level": "Intermediate", "domainKey": "iam" },
+  { "id": "cert_334", "acronym": "Google PCSE", "fullName": "Google Professional Cloud Security Engineer", "details": "$200 exam", "href": "https://cloud.google.com/certification/cloud-security-engineer", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_335", "acronym": "EXIN PCSM", "fullName": "EXIN Professional Cloud Security Manager", "details": "$315 exam", "href": "https://www.exin.com/certifications/ccc-professional-cloud-security-manager-exam", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_336", "acronym": "MDSO", "fullName": "Mosse Institute Certified DevSecOps Engineer", "details": "$450 exam", "href": "https://www.mosse-institute.com/certifications/mdso-certified-devsecops-engineer.html", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_337", "acronym": "SCA", "fullName": "SUSE Certified Administrator", "details": "$149 exam", "href": " https://www.suse.com/training/exam/sca-sles-15/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_338", "acronym": "ISA CAP", "fullName": "ISA Certified Automation Specialist", "details": "$467 exam", "href": "https://www.isa.org/training-and-certifications/isa-certification/isa99iec-62443/isa99iec-62443-cybersecurity-certificate-programs/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_339", "acronym": "TUV COSM", "fullName": "TUV Certified OT Security Manager", "details": "$3,070 Course", "href": "https://limessecurity.com/en/academy/ics-211/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_340", "acronym": "Zach EAA", "fullName": "Zachman Enterprise Architect Associate (Level 1)", "details": "$2,999 course exam\nBranded course required", "href": "https://www.zachman.com/certification/what-we-certify/enterprise-architect", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_341", "acronym": "CAD", "fullName": "GAQM Certified Agile Developer", "details": "$128 exam", "href": "https://gaqm.org/certifications/scrum_agile/cad", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_342", "acronym": "CAC", "fullName": "GAQM Certified Agile Coach", "details": "$170", "href": "https://gaqm.org/certifications/scrum_agile/cac", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_343", "acronym": "ISMI CSMP", "fullName": "ISMI Certified Security Management Professional", "details": "$1159", "href": "https://www.ismi.org.uk/csmp/csmp%C2%AE-overview.aspx", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_344", "acronym": "CSCS", "fullName": "EC First Certified Security Compliance Specialist", "details": "$695 exam", "href": "https://ecfirst.biz/index.php?route=product/product&path=59_61&product_id=89", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_345", "acronym": "APMG 27001F", "fullName": "APMG ISO/IEC 27001 Foundation", "details": "$400 exam\nApplication essay", "href": "https://apmg-international.com/product/isoiec-27001", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_346", "acronym": "PECB 27001F", "fullName": "PECB ISO/IEC 27001 Foundation", "details": "$500-749 exam\nCourse required", "href": "https://pecb.com/en/education-and-certification-for-individuals/iso-iec-27001/iso-iec-27001-foundation", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_347", "acronym": "C)SLO", "fullName": "Mile2 Certified Security Leadership Officer", "details": "$550 exam", "href": "https://www.mile2.com/cslo_outline/", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_348", "acronym": "DCBCA", "fullName": "DRI Certified Business Continuity Auditor", "details": "$400 exam\nApplication req", "href": "https://drii.org/certification/cbca", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_349", "acronym": "GRCA", "fullName": "OCEG Governance, Risk, and Compliance Auditor", "details": "$399 12 month license", "href": "https://www.oceg.org/certifications/grc-audit-certification/", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_350", "acronym": "CISST", "fullName": "GAQM Certified Information systems Security Tester", "details": "$170 exam", "href": "https://gaqm.org/certifications/information_systems_security/cisst", "level": "Intermediate", "domainKey": "test" },
+  { "id": "cert_351", "acronym": "C)SWAE", "fullName": "Mile2 Secure Web Application Engineer", "details": "$550 exam", "href": "https://www.mile2.com/cswae_outline/", "level": "Intermediate", "domainKey": "soft" },
+  { "id": "cert_352", "acronym": "OPSA", "fullName": "ISECOM OSSTMM Professional Security Analyst", "details": "$100 annual sub\nUnknown exam fee", "href": "https://www.isecom.org/certification.html", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_353", "acronym": "CSAE", "fullName": "Cyber Struggle AEGIS", "details": "$1,700 course exam\nBranded course required", "href": "https://cyberstruggle.org/aegis-certification/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_354", "acronym": "ASIS PCI", "fullName": "ASIS Professional Certified Investigator", "details": "$485 exam", "href": "https://www.asisonline.org/certification/professional-certified-investigator-pci", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_355", "acronym": "MAD SOCA", "fullName": "Mitre Att&ck Defender Security Operations Center Assessment", "details": "$299 annual subscription", "href": "https://mitre-engenuity.org/mad/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_356", "acronym": "MAD CTI", "fullName": "Mitre Att&ck Defender Cyber Threat intelligence", "details": "$299 annual subscription", "href": "https://mitre-engenuity.org/mad/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_357", "acronym": "CEH", "fullName": "EC Council Certified Ethical Hacker", "details": "$1,199 exam", "href": "https://www.eccouncil.org/programs/certified-ethical-hacker-ceh/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_358", "acronym": "SOG CAPen", "fullName": "The SecOps Group Certified AppSec Pentester", "details": "$500 exam", "href": "https://secops.group/product/certified-appsec-pentester/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_359", "acronym": "C)PTE", "fullName": "Mile2 Certified Penetration Testing Engineer", "details": "$550 exam", "href": "https://www.mile2.com/penetration-testing-engineer-outline/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_360", "acronym": "SOG CNPen", "fullName": "The SecOps Group Certified Network Pentester", "details": "$500 exam", "href": "https://secops.group/product/certified-network-pentester/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_361", "acronym": "DV RTOS", "fullName": "Dark Vortex Red Team & Operational Security", "details": "$2500 exam\nCourse required", "href": "https://0xdarkvortex.dev/training-programs/red-team-and-operational-security/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_362", "acronym": "DV OTD", "fullName": "Dark Vortex Offensive Tool Development", "details": "$2000 exam\nCourse required", "href": "https://0xdarkvortex.dev/training-programs/offensive-tool-development/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_363", "acronym": "MVRE", "fullName": "Mosse Institute Vulnerability Researcher and Exploitation Specialist", "details": "$450 Exam", "href": "https://www.mosse-institute.com/certifications/mvre-vulnerability-researcher-and-exploitation-specialist.html", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_364", "acronym": "MNSE", "fullName": "Mosse Institute Network Security Essentials", "details": "$450 certification programme\n100% practical. No expiry.", "href": "https://www.mosse-institute.com/certifications/mnse-network-security-essentials.html", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_365", "acronym": "PCNSA", "fullName": "Palo Alto Networks Certified Network Security Administrator", "details": "$155 exam", "href": "https://www.paloaltonetworks.com/services/education/certification", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_366", "acronym": "OWSE", "fullName": "ISECOM OSSTMM Wireless Security Expert", "details": "$100 annual sub\nUnknown exam cost", "href": "https://www.isecom.org/certification.html", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_367", "acronym": "SC-300", "fullName": "Microsoft Certfied: Identity and Access Administrator Associate", "details": "$165 exam", "href": "https://docs.microsoft.com/en-us/learn/certifications/identity-and-access-administrator/", "level": "Intermediate", "domainKey": "iam" },
+  { "id": "cert_368", "acronym": "CSA CCSK", "fullName": "Cloud Security Alliance Certificate of Cloud Security Knowledge", "details": "$395 exam", "href": "https://cloudsecurityalliance.org/education/ccsk/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_369", "acronym": "C)CSO", "fullName": "Mile2 Certified Cloud Security Officer", "details": "$550 exam", "href": "https://mile2.com/ccso_outline/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_370", "acronym": "DCA", "fullName": "Docker Certified Associate", "details": "$195 exam", "href": "https://training.mirantis.com/dca-certification-exam/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_371", "acronym": "LPIC-1", "fullName": "Linux Professional Institute Certified: Linux Administrator", "details": "$400 2 exams", "href": "https://www.lpi.org/our-certifications/lpic-1-overview", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_372", "acronym": "GICSP", "fullName": "GIAC Global Industrial Security Professional", "details": "$979 exam\nSANS course encouraged", "href": "https://www.giac.org/certification/global-industrial-cyber-security-professional-gicsp", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_373", "acronym": "GSEC", "fullName": "GIAC Security Essentials Certification", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/security-essentials-gsec", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_374", "acronym": "MOIS", "fullName": "MOIS Certified OSINT Expert Certification", "details": "$450 certification programme\n100% practical. No expiry.", "href": "https://www.mosse-institute.com/certifications/mois-certified-osint-expert.html", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_375", "acronym": "CFA", "fullName": "GAQM Certified Forensic Analyst", "details": "$128 exam", "href": "https://gaqm.org/certifications/information_systems_security/cfa", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_376", "acronym": "CSA", "fullName": "EC Council Certified SOC Analyst", "details": "$550 exam", "href": "https://www.eccouncil.org/programs/certified-soc-analyst-csa/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_377", "acronym": "GFACT", "fullName": "GIAC Foundational Cybersecurity Technologies", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certifications/foundational-cybersecurity-technologies-gfact/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_378", "acronym": "SOG CMPen And", "fullName": "The SecOps Group Certified Mobile Pentester - Android", "details": "$400 exam", "href": "https://secops.group/product/certified-mobile-pentester-cmpen-android/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_379", "acronym": "SOG CMPen iOS", "fullName": "The SecOps Group Certified Mobile Pentester - iOS", "details": "$400 exam", "href": "https://secops.group/product/certified-mobile-pentester-cmpen-ios/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_380", "acronym": "DV MoS", "fullName": "Dark Vortex Malware on Steroids", "details": "$2000 exam\nCourse required", "href": "https://0xdarkvortex.dev/training-programs/malware-on-steroids/#certification", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_381", "acronym": "Pentest+", "fullName": "CompTIA Pentest+", "details": "$404 exam", "href": "https://www.comptia.org/certifications/pentest", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_382", "acronym": "CREST CSAS", "fullName": "CREST Certified Simulated Attack Specialist", "details": "$2,520 2 exams & lab", "href": "https://www.crest-approved.org/certification-careers/crest-certifications/crest-certified-simulated-attack-specialist", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_383", "acronym": "ECES", "fullName": "EC Council Certified Encryption Specialist", "details": "$249 exam", "href": "https://www.eccouncil.org/programs/ec-council-certified-encryption-specialist-eces/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_384", "acronym": "JNCIA Sec", "fullName": "Juniper Networks Certified Internet Associate, Security", "details": "$200 exam", "href": "https://www.juniper.net/us/en/training/certification/certification-tracks/junos-security-track/?tab=jnciasec", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_385", "acronym": "FCA", "fullName": "Fortinet Certificed Associate", "details": "Free course and exam required", "href": "https://training.fortinet.com/local/staticpage/view.php?page=fca_cybersecurity", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_386", "acronym": "WCNA", "fullName": "Protocol Analysis Institute Wireshark Certified Network Analyst", "details": "$299 exam", "href": "https://www.wcnacertification.com/exam-information-1", "level": "Intermediate", "domainKey": "net" },
+  { "id": "cert_387", "acronym": "Server+", "fullName": "CompTIA Server+", "details": "$319 exam", "href": "https://www.comptia.org/certifications/server", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_388", "acronym": "PDSO CDP", "fullName": "PDSO Certified DevSecOps Professional", "details": "$799\nExam and training bundled", "href": "https://www.practical-devsecops.com/certified-devsecops-professional/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_389", "acronym": "EXIN PCD", "fullName": "EXIN Professional Cloud Developer", "details": "$315 exam", "href": "https://www.exin.com/certifications/ccc-professional-cloud-developer-exam", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_390", "acronym": "KCNA", "fullName": "Cloud Native Computing Foundation Kubernetes and Cloud Native Associate", "details": "$250 exam\nBranded course required", "href": "https://www.cncf.io/certification/kcna/", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_391", "acronym": "Linux+", "fullName": "CompTIA Linux+", "details": "$369 exam", "href": "https://www.comptia.org/certifications/linux", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_392", "acronym": "AZ-220", "fullName": "Azure IoT Developer Specialty", "details": "$165 exam", "href": "https://docs.microsoft.com/en-us/learn/certifications/azure-iot-developer-specialty?wt.mc_id=learningredirect_certs-web-wwl", "level": "Intermediate", "domainKey": "eng" },
+  { "id": "cert_393", "acronym": "CRFS", "fullName": "IMI Certified Red Flag Specialist", "details": "$295 exam", "href": "https://www.identitymanagementinstitute.org/crfs/", "level": "Intermediate", "domainKey": "asset" },
+  { "id": "cert_394", "acronym": "SSCP", "fullName": "(ISC)2 Systems Security Certified Practitioner", "details": "$249 exam", "href": "https://www.isc2.org/Certifications/SSCP", "level": "Intermediate", "domainKey": "mgmt" },
+  { "id": "cert_395", "acronym": "SOG CAP", "fullName": "SecOps Group Certified AppSec Practitioner", "details": "$249 exam", "href": "https://secops.group/product/certified-application-security-practitioner/", "level": "Intermediate", "domainKey": "soft" },
+  { "id": "cert_396", "acronym": "CCOA", "fullName": "ISACA Certified Cybersecurity Operations Analyst", "details": "$760 exam", "href": "https://www.isaca.org/credentialing/ccoa", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_397", "acronym": "CREST CPIA", "fullName": "CREST Practitioner Intrusion Analyst", "details": "$425 exam", "href": "https://www.crest-approved.org/certification-careers/crest-certifications/crest-practitioner-intrusion-analyst", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_398", "acronym": "MESE", "fullName": "Mosse Institute Enterprise Security Engineer", "details": "$450 exam", "href": "https://www.mosse-institute.com/certifications/mese-certified-enterprise-security-engineer.html", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_399", "acronym": "CREST CPTIA", "fullName": "CREST Practitioner Threat Intelligence Analyst", "details": "$425 exam", "href": "https://www.crest-approved.org/certification-careers/crest-certifications/crest-practitioner-threat-intelligence-analyst/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_400", "acronym": "MCPT", "fullName": "Mosse Institute Cloud Penetration Tester", "details": "$450 exam", "href": "https://www.mosse-institute.com/certifications/mcpt-cloud-penetration-tester.html", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_401", "acronym": "C)PEH", "fullName": "Mile2 Certified Professional Ethical Hacker", "details": "$550 exam", "href": "https://mile2.com/professional-ethical-hacker/", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_402", "acronym": "GCPEH", "fullName": "GAQM Certified Professional Ethical Hacker", "details": "$170 exam", "href": "https://gaqm.org/certifications/information_systems_security/cpeh", "level": "Intermediate", "domainKey": "ops" },
+  { "id": "cert_403", "acronym": "CCSA", "fullName": "Checkpoint Certified Security Administrator", "details": "$250 exam", "href": "https://training-certifications.checkpoint.com/#/courses/Check%20Point%20Certified%20Admin%20(CCSA)%20R80.x", "level": "Beginner", "domainKey": "net" },
+  { "id": "cert_404", "acronym": "ITS-NS", "fullName": "Certiport IT Specialist - Network Security", "details": "$127 exam", "href": "https://certiport.filecamp.com/s/ITS_OD_102_Network_Security/fi", "level": "Beginner", "domainKey": "net" },
+  { "id": "cert_405", "acronym": "CCT", "fullName": "Cisco Certified Technician", "details": "$165 exam", "href": "https://www.cisco.com/c/en/us/training-events/training-certifications/certifications/entry/technician-cct.html", "level": "Beginner", "domainKey": "net" },
+  { "id": "cert_406", "acronym": "Cloud+", "fullName": "CompTIA Cloud+", "details": "$369 exam", "href": "https://www.comptia.org/certifications/cloud", "level": "Beginner", "domainKey": "eng" },
+  { "id": "cert_407", "acronym": "Google ACE", "fullName": "Google Associate Cloud Engineer", "details": "$125 exam", "href": "https://cloud.google.com/certification/cloud-engineer", "level": "Beginner", "domainKey": "eng" },
+  { "id": "cert_408", "acronym": "SOG CCSP-AWS", "fullName": "SecOps Group Certified Cloud Security Practitioner - AWS", "details": "$249 exam", "href": "https://secops.group/product/certified-cloud-security-practitioner-aws-ccsp-aws/", "level": "Beginner", "domainKey": "eng" },
+  { "id": "cert_409", "acronym": "LFCA", "fullName": "Linux Foundation Certified IT Associate", "details": "$200 exam", "href": "https://training.linuxfoundation.org/certification/certified-it-associate/", "level": "Beginner", "domainKey": "eng" },
+  { "id": "cert_410", "acronym": "ISA CFS", "fullName": "ISA Certified Fundamentals Specialist", "details": "$2,700 course + exam\nCourse required", "href": "https://www.isa.org/training-and-certifications/isa-certification/isa99iec-62443/isa99iec-62443-cybersecurity-certificate-programs/", "level": "Beginner", "domainKey": "eng" },
+  { "id": "cert_411", "acronym": "EITCA/IS", "fullName": "EITCA/IS Information Security Certificate", "details": "$120 exam", "href": "https://eitca.org/eitca-is-information-security-academy/", "level": "Beginner", "domainKey": "eng" },
+  { "id": "cert_412", "acronym": "CIPP", "fullName": "IAPP Certified Information Privacy Professional", "details": "$550 exam", "href": "https://iapp.org/certify/cipp", "level": "Beginner", "domainKey": "asset" },
+  { "id": "cert_413", "acronym": "Security+", "fullName": "CompTIA Security+", "details": "$404 exam", "href": "https://www.comptia.org/certifications/security", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_414", "acronym": "ECSS", "fullName": "EC Council Certified Security Specialist", "details": "$249 exam", "href": "https://www.eccouncil.org/programs/certified-security-specialist-ecss/", "level": "Beginner", "domainKey": "ops" },
+  { "id": "cert_415", "acronym": "C)DFE", "fullName": "Mile2 Certified Digital Forensics Examiner", "details": "$550 exam", "href": "https://www.mile2.com/cdfe_outline/", "level": "Beginner", "domainKey": "ops" },
+  { "id": "cert_416", "acronym": "S-SA", "fullName": "SECO Associate SOC Analyst", "details": "$480 exam", "href": "https://www.seco-institute.org/get-trained/cyber-defense-track/associate-soc-analyst-certification/", "level": "Beginner", "domainKey": "ops" },
+  { "id": "cert_417", "acronym": "DV AOPH", "fullName": "Dark Vortex Adversary Operations and Proactive Hunting", "details": "$2500 exam\nCourse required", "href": "https://0xdarkvortex.dev/training-programs/adversary-operations-and-proactive-hunting/", "level": "Beginner", "domainKey": "ops" },
+  { "id": "cert_418", "acronym": "SOG NSP", "fullName": "SecOps Group Certified Network Security Practitioner", "details": "$249 exam", "href": "https://secops.group/product/certified-network-security-practitioner/", "level": "Beginner", "domainKey": "net" },
+  { "id": "cert_419", "acronym": "Net+", "fullName": "CompTIA Network+", "details": "$369 exam", "href": "https://www.comptia.org/certifications/network", "level": "Beginner", "domainKey": "net" },
+  { "id": "cert_420", "acronym": "CAMS", "fullName": "IMI Certfied Access Management Specialist", "details": "$195 exam", "href": "https://www.identitymanagementinstitute.org/cams/", "level": "Beginner", "domainKey": "iam" },
+  { "id": "cert_421", "acronym": "AZ-900", "fullName": "Microsoft Azure Fundamentals", "details": "$165 exam", "href": "https://docs.microsoft.com/en-us/learn/certifications/azure-fundamentals", "level": "Beginner", "domainKey": "eng" },
+  { "id": "cert_422", "acronym": "MCSF", "fullName": "Mosse Institute Cloud Services Fundamentals", "details": "$450 exam", "href": "https://www.mosse-institute.com/certifications/mcsf-cloud-services-fundamentals.html", "level": "Beginner", "domainKey": "eng" },
+  { "id": "cert_423", "acronym": "MSAF", "fullName": "Mosse Institute System Administration Fundamentals", "details": "$450 exam", "href": "https://www.mosse-institute.com/certifications/msaf-system-administration-fundamentals.html", "level": "Beginner", "domainKey": "eng" },
+  { "id": "cert_424", "acronym": "Apple ACSP", "fullName": "Apple Certified Support Professional", "details": "$250 exam\nLimited test locations", "href": "https://training.apple.com/us/en/recognition", "level": "Beginner", "domainKey": "eng" },
+  { "id": "cert_425", "acronym": "CACS", "fullName": "Excida IEC 62443 Certified Automation Cybersecurity Specialist", "details": "$700 exam", "href": "https://www.exidacace.com/Apply/CACS", "level": "Beginner", "domainKey": "eng" },
+  { "id": "cert_426", "acronym": "TUV COSTE", "fullName": "TUV Certified OT Security Technical Expert", "details": "$3,070 course", "href": "https://limessecurity.com/en/academy/ics-211/", "level": "Beginner", "domainKey": "eng" },
+  { "id": "cert_427", "acronym": "EPDPF", "fullName": "EXIN Privacy and Data Protection Foundation", "details": "$207 exam", "href": "https://www.exin.com/certifications/exin-privacy-and-data-protection-foundation-exam", "level": "Beginner", "domainKey": "asset" },
+  { "id": "cert_428", "acronym": "TOGAF Fdn", "fullName": "OpenGroup TOGAF Certified", "details": "$360 exam", "href": "https://www.opengroup.org/certifications/togaf", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_429", "acronym": "CSP", "fullName": "GAQM Certified SAFe Practitioner", "details": "$170 exam", "href": "https://gaqm.org/certifications/scrum_agile/csp-410", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_430", "acronym": "IIBA CCA", "fullName": "IIBA Certification in Cybersecurity Analysis", "details": "$475 exam", "href": "https://www.iiba.org/certification/iiba-certifications/specialized-business-analysis-certifications/certificate-in-cybersecurity-analysis/", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_431", "acronym": "CITGP", "fullName": "IBITGQ Certified in Implementing IT Governance - Foundation & Principles", "details": "~$2,499 course exam\nBranded course required", "href": "https://www.itgovernance.co.uk/shop/product/implementing-it-governance-foundation-principles-training-course", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_432", "acronym": "C)ISCAP", "fullName": "Mile2 Information Systems Certification and Accredidation Professional", "details": "$550 exam", "href": "https://www.mile2.com/iscap_outline/", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_433", "acronym": "CSAP", "fullName": "Infosec Institute Certified Security Awareness Practitioner", "details": "$2,599 exam\nCourse required", "href": "https://app.infosecinstitute.com/portal/courses/a0t0y000009lTzjAAE", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_434", "acronym": "PECB 27032F", "fullName": "PECB ISO/IEC 27032 Foundation", "details": "$500-749 exam\nCourse required", "href": "https://pecb.com/en/education-and-certification-for-individuals/iso-iec-27032/iso-iec-27032-foundation", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_435", "acronym": "MCL", "fullName": "Mosse Institute Cybersecurity Leadership", "details": "$450 exam", "href": "https://www.mosse-institute.com/certifications/mcl-cybersecurity-leadership.html", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_436", "acronym": "ITS-C", "fullName": "Certiport IT Specialist - Cybersecurity", "details": "$127 exam", "href": "https://certiport.filecamp.com/s/JTIy1sX0ci0ZI3ss/fi", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_437", "acronym": "EXIN CIT", "fullName": "EXIN Cyber & IT Security", "details": "$225 exam", "href": "https://www.exin.com/qualification-program/exin-cyber-and-it-security", "level": "Beginner", "domainKey": "test" },
+  { "id": "cert_438", "acronym": "TUV CySec", "fullName": "TUV Rheinland Cybersecurity Specialist (GERMAN)", "details": "$415 exam\nCourse required", "href": "https://www.tuv.com/landingpage/en/training-functional-safety-cyber-security/detail-pages/zertifikate/cs-specialist.html", "level": "Beginner", "domainKey": "test" },
+  { "id": "cert_439", "acronym": "CSST", "fullName": "GAQM Certified Software Security Tester", "details": "$170 exam", "href": "https://gaqm.org/certifications/software_security_testing/csst", "level": "Beginner", "domainKey": "soft" },
+  { "id": "cert_440", "acronym": "OPSE", "fullName": "ISECOM OSSTMM Professional Security Expert", "details": "$100 annual sub\nUnknown exam cost", "href": "https://www.isecom.org/certification.html", "level": "Beginner", "domainKey": "ops" },
+  { "id": "cert_441", "acronym": "CSX-F", "fullName": "IBITGQ Cyber Incident Response Management Foundation", "details": "$768 course exam\nBranded course required", "href": "https://www.itgovernance.co.uk/shop/product/cyber-incident-response-management-foundation-training-course", "level": "Beginner", "domainKey": "ops" },
+  { "id": "cert_442", "acronym": "DV MILF", "fullName": "Dark Vortex Malware Incident and Log Foensics", "details": "$2000 exam", "href": "https://0xdarkvortex.dev/training-programs/malware-incident-and-log-forensics/", "level": "Beginner", "domainKey": "ops" },
+  { "id": "cert_443", "acronym": "CIRM Fdn", "fullName": "IBITGQ Cyber Incident Response Management Foundation", "details": "$768 course exam\nBranded course required", "href": "https://www.itgovernance.co.uk/shop/product/cyber-incident-response-management-foundation-training-course", "level": "Beginner", "domainKey": "ops" },
+  { "id": "cert_444", "acronym": "EEHF", "fullName": "EXIN Ethical Hacking Foundation", "details": "$232 exam", "href": "https://www.exin.com/certifications/exin-ethical-hacking-foundation-exam", "level": "Beginner", "domainKey": "ops" },
+  { "id": "cert_445", "acronym": "S-EHF", "fullName": "SECO Ethical Hacking Foundation", "details": "$460 exam", "href": "https://www.seco-institute.org/certifications/ethical-hacking-certification-track/ethical-hacking-foundation/", "level": "Beginner", "domainKey": "ops" },
+  { "id": "cert_446", "acronym": "CHA", "fullName": "ISECOM Certified Hacker Analyst", "details": "$100 annual sub\nUnknown exam cost", "href": "https://www.isecom.org/certification.html", "level": "Beginner", "domainKey": "ops" },
+  { "id": "cert_447", "acronym": "FCF", "fullName": "Fortinet Certified Fundamentals Cybersecurity", "details": "Free 3 courses with exams req", "href": "https://training.fortinet.com/local/staticpage/view.php?page=fcf_cybersecurity", "level": "Beginner", "domainKey": "net" },
+  { "id": "cert_448", "acronym": "PCCET", "fullName": "Palo Alto Networks Certified Cybersecurity Entry-level Technician", "details": "$110 exam", "href": "https://www.paloaltonetworks.com/services/education/certification", "level": "Beginner", "domainKey": "net" },
+  { "id": "cert_449", "acronym": "AWS CP", "fullName": "Amazon Web Services Certified Cloud Practitioner", "details": "$100 exam", "href": "https://aws.amazon.com/certification/certified-cloud-practitioner/", "level": "Beginner", "domainKey": "eng" },
+  { "id": "cert_450", "acronym": "EXIN PCA", "fullName": "EXIN Professional Cloud Administrator", "details": "$315 exam", "href": "https://www.exin.com/certifications/ccc-professional-cloud-administrator-exam", "level": "Beginner", "domainKey": "eng" },
+  { "id": "cert_451", "acronym": "A+", "fullName": "CompTIA A+", "details": "$253 exam", "href": "https://www.comptia.org/certifications/a", "level": "Beginner", "domainKey": "eng" },
+  { "id": "cert_452", "acronym": "CIOTSP", "fullName": "CertNexus Certified Internet of Things Security Practitioner", "details": "$250 exam", "href": "https://certnexus.com/certification/ciotsp/", "level": "Beginner", "domainKey": "eng" },
+  { "id": "cert_453", "acronym": "TUV COSP", "fullName": "TUV Certified OT Security Practitioner", "details": "$2725 course", "href": "https://limessecurity.com/en/academy/ics-201/", "level": "Beginner", "domainKey": "eng" },
+  { "id": "cert_454", "acronym": "EPDPE", "fullName": "EXIN Privacy and Data Protection Essentials", "details": "$145 exam", "href": "https://www.exin.com/certifications/exin-privacy-and-data-protection-essentials-exam", "level": "Beginner", "domainKey": "asset" },
+  { "id": "cert_455", "acronym": "M_o_R Fdn", "fullName": "Axelos M_o_R Framework Foundation", "details": "$495 exam", "href": "https://www.axelos.com/certifications/propath/mor-risk-management/mor-foundation", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_456", "acronym": "Fair Fdn", "fullName": "Fair Institute Analysis Fundamentals", "details": "$1499 exam\nCourse required", "href": "https://risklens-academy.myshopify.com/collections/popular-courses/products/fair-analysis-fundamentals-2", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_457", "acronym": "PSM I", "fullName": "Scrum.org Professional Scrum Master I", "details": "$150 exam", "href": "https://www.scrum.org/assessments/professional-scrum-master-i-certification", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_458", "acronym": "APMG 20000F", "fullName": "APMG ISO/IEC 20000 Foundation", "details": "$308 exam", "href": "https://apmg-international.com/product/iso-20000", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_459", "acronym": "ISMI CSM", "fullName": "ISMI Certified Security Manager", "details": "$TBD", "href": "https://www.ismi.org.uk/csmp/certified-security-manager%C2%AE", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_460", "acronym": "BCS FISMP", "fullName": "BCS Foundation Certifiate in Information Security Management Principles", "details": "$249 exam", "href": "https://www.bcs.org/get-qualified/certifications-for-professionals/information-security-and-ccp-scheme-certifications/bcs-foundation-certificate-in-information-security-management-principles/", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_461", "acronym": "CC", "fullName": "ISC2 Certified in Cybersecurity", "details": "Free exam", "href": "https://www.isc2.org/Certifications/CC", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_462", "acronym": "S-ISF", "fullName": "SECO Information Security Foundation", "details": "$460 exam", "href": "https://www.seco-institute.org/certifications/information-security-certification-track/", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_463", "acronym": "GISF", "fullName": "GIAC Information Security Fundamentals", "details": "$979 exam\nSANS course recommended", "href": "https://www.giac.org/certification/information-security-fundamentals-gisf", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_464", "acronym": "TUV CyAware", "fullName": "TUV Rheinland Cybersecurity Awareness (GERMAN)", "details": "$415 exam\nCourse required", "href": "https://www.is-its.org/seminare/isits-seminarangebot/cybersecurity-awareness-beauftragter", "level": "Beginner", "domainKey": "test" },
+  { "id": "cert_465", "acronym": "MASE", "fullName": "Mosse Institute Certified Application Security Engineer", "details": "$450 exam", "href": "https://www.mosse-institute.com/certifications/mase-certified-application-security-engineer.html", "level": "Beginner", "domainKey": "soft" },
+  { "id": "cert_466", "acronym": "C)SP", "fullName": "Mile2 Certified Security Principles", "details": "$550 exam", "href": "https://www.mile2.com/csp_outline/", "level": "Beginner", "domainKey": "ops" },
+  { "id": "cert_467", "acronym": "CND", "fullName": "EC Council Certified Network Defender", "details": "$550 exam", "href": "https://www.eccouncil.org/programs/certified-network-defender-cnd/", "level": "Beginner", "domainKey": "ops" },
+  { "id": "cert_468", "acronym": "C)VA", "fullName": "Mile2 Certified Vulnerability Assessor", "details": "$550 exam", "href": "https://www.mile2.com/vulnerability-assessor-outline/", "level": "Beginner", "domainKey": "ops" },
+  { "id": "cert_469", "acronym": "KLCP", "fullName": "Kali Linux Certified Professional", "details": "$299 exam", "href": "https://kali.training/klcp/", "level": "Beginner", "domainKey": "ops" },
+  { "id": "cert_470", "acronym": "SC-900", "fullName": "Microsoft Certified: Security, Compliance, and Identity Fundamentals", "details": "$99 exam", "href": "https://docs.microsoft.com/en-us/learn/certifications/security-compliance-and-identity-fundamentals/", "level": "Beginner", "domainKey": "iam" },
+  { "id": "cert_471", "acronym": "Cloud Essnt", "fullName": "CompTIA Cloud Essentials", "details": "$138 exam", "href": "https://www.comptia.org/certifications/cloud-essentials", "level": "Beginner", "domainKey": "eng" },
+  { "id": "cert_472", "acronym": "ITIL Fdn", "fullName": "ITIL Foundation", "details": "$383 exam", "href": "https://www.axelos.com/certifications/itil-certifications/itil-foundation", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_473", "acronym": "Project+", "fullName": "CompTIA Project+", "details": "$369 exam", "href": "https://www.comptia.org/certifications/project", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_474", "acronym": "CIISec ICSF", "fullName": "CIISec Information and Cybersecurity Fundamentals", "details": "$450 exam", "href": "https://www.ciisec.org/ICSF_Exam", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_475", "acronym": "FEXIN", "fullName": "EXIN Information Security Foundation", "details": "$232 exam", "href": "https://www.exin.com/certifications/information-security-foundation-based-iso-iec-27001-exam?language_content_entity=en", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_476", "acronym": "EXIN 27001F", "fullName": "EXIN ISO/IEC 27001 Foundation", "details": "$232 exam", "href": "https://www.exin.com/certifications/information-security-foundation-based-iso-iec-27001-exam", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_477", "acronym": "PECB 27005F", "fullName": "PECB ISO/IEC 27005 Foundation", "details": "$500-749 exam\nCourse required", "href": "https://pecb.com/en/education-and-certification-for-individuals/iso-iec-27005/iso-iec-27005-foundation", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_478", "acronym": "C CS F", "fullName": "IBITGQ Certified Cyber Security Foundation", "details": "$725 course exam\nBranded course required", "href": "https://www.itgovernance.co.uk/shop/product/certified-cyber-security-foundation-training-course", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_479", "acronym": "CIS F", "fullName": "IBITGQ Certified ISO 27001 Information Security Management Specialist Foundation", "details": "$853 course exam\nBrandeed course required", "href": "https://www.itgovernance.co.uk/shop/product/certified-iso-27001-isms-foundation-training-course", "level": "Beginner", "domainKey": "mgmt" },
+  { "id": "cert_480", "acronym": "S-SPF", "fullName": "SECO Secure Programming Foundation", "details": "$460 exam", "href": "https://www.seco-institute.org/certifications/secure-software-certification-track/secure-programming-foundation/", "level": "Beginner", "domainKey": "soft" },
+  { "id": "cert_481", "acronym": "CSCU", "fullName": "EC Council Certified Secure Computer User", "details": "$125 exam", "href": "https://www.eccouncil.org/Certification/certified-secure-computer-user", "level": "Beginner", "domainKey": "ops" },
+  { "id": "cert_482", "acronym": "MICS", "fullName": "Mosse Institute Introductions to Cyber Security", "details": "Free exam", "href": "https://www.mosse-institute.com/certifications/mics-introduction-to-cyber-security.html", "level": "Beginner", "domainKey": "ops" }];
+
+    </script>
+</body>
+</html>
