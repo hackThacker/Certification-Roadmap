@@ -1,3 +1,16 @@
+## 🌐 Certification Roadmap (Live Site)
+
+Explore the **Interactive Certification Roadmap** published at:
+
+➡️ https://hackthacker.github.io/Certification-Roadmap/
+
+This roadmap provides a **visual and structured guide** to certifications and related paths across multiple cybersecurity domains.  
+It serves as a **reference and planning tool** for learners and professionals mapping their certification journeys.
+
+> 💡 *This is a guide, not a definitive path. Prices & requirements are estimates. Always verify information with the certification body. Based on the excellent original work by CyberSecurity teams.*
+
+---
+
 # 📜 Cybersecurity Certification Directory
 
 A structured, community-driven repository of **cybersecurity and technology certifications**, organized by domain, level, and relevance.  
@@ -62,7 +75,7 @@ Only the following `domainKey` values are permitted.
 
 ⚠️ Using undocumented or custom domain keys is **not allowed**.
 
----
+
 
 ## 📊 Certification Levels
 
@@ -74,7 +87,7 @@ Allowed values for `level`:
 
 Choose the level based on the **expected experience and exam difficulty**.
 
----
+
 
 ## 🛠️ Contributing
 
@@ -88,7 +101,7 @@ Contributions are welcome and reviewed carefully.
 * Proper level assignment
 * Full schema compliance
 
----
+
 
 ## 🚫 Restrictions
 
@@ -97,7 +110,7 @@ Contributions are welcome and reviewed carefully.
 * No unofficial or broken links
 * No removal or modification of attribution
 
----
+
 
 
 ## 📜 License & Attribution
@@ -107,10 +120,8 @@ This project is provided for educational and community use.
 © 2026 by Hackthacker
 hackthacker.blogspot.com
 
----
+
 
 ## 🙌 Acknowledgements
 
 Thanks to all contributors who help maintain the quality, accuracy, and professionalism of this repository.
-
-```
